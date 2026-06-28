@@ -31,7 +31,11 @@ local ServerStorage = game:GetService("ServerStorage")
 -- DEPENDÊNCIAS — MÓDULOS DO SERVIDOR
 -- ==========================================
 local MatchService = require(ServerScriptService.Services.MatchService)
+local SurvivorService = require(ServerScriptService.Services.SurvivorService)
+local KillerService = require(ServerScriptService.Services.KillerService)
 local PlayerEvents = require(ServerScriptService.Events.PlayerEvents)
+local SurvivorEvents = require(ServerScriptService.Events.SurvivorEvents)
+local KillerEvents = require(ServerScriptService.Events.KillerEvents)
 
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS COMPARTILHADOS
@@ -39,6 +43,7 @@ local PlayerEvents = require(ServerScriptService.Events.PlayerEvents)
 local GameConstants = require(ReplicatedStorage.GameConstants)
 local PlayerActionEvent = require(ReplicatedStorage.Events.PlayerActionEvent)
 local GameStateEvent = require(ReplicatedStorage.Events.GameStateEvent)
+local UISyncEvent = require(ReplicatedStorage.Events.UISyncEvent)
 
 -- ==========================================
 -- VARIÁVEIS DE ESTADO
@@ -46,6 +51,7 @@ local GameStateEvent = require(ReplicatedStorage.Events.GameStateEvent)
 -- Referências aos RemoteEvents (criados no Init)
 local gameStateEvent: RemoteEvent
 local playerActionEvent: RemoteEvent
+local uiSyncEvent: RemoteEvent
 
 -- ==========================================
 -- FUNÇÃO: Garantir estrutura de pastas
@@ -75,6 +81,7 @@ local function createRemoteEvents()
 	-- Cria cada RemoteEvent usando os módulos compartilhados
 	gameStateEvent = GameStateEvent.createEvent(eventsFolder)
 	playerActionEvent = PlayerActionEvent.createEvent(eventsFolder)
+	uiSyncEvent = UISyncEvent.createEvent(eventsFolder)
 
 	print("[CacadaSombria] RemoteEvents criados em ReplicatedStorage.Events")
 end
@@ -138,9 +145,21 @@ local function initServices()
 	-- MatchService precisa das referências aos RemoteEvents
 	MatchService.Init(gameStateEvent, playerActionEvent)
 
+	-- KillerService: lógica do Caçador
+	KillerService.Init(gameStateEvent, uiSyncEvent, MatchService)
+
+	-- KillerEvents: handlers de ações do Caçador
+	-- Registra handlers no PlayerActionEvent existente
+	KillerEvents.Init(playerActionEvent, KillerService, MatchService)
+
+	-- SurvivorService: lógica das 5 classes de Sobreviventes
+	SurvivorService.Init(gameStateEvent, playerActionEvent, uiSyncEvent, MatchService)
+
+	-- SurvivorEvents: handlers auxiliares de ações de Sobreviventes
+	-- Registra handlers no PlayerActionEvent (roteamento de Ability1/2/3)
+	SurvivorEvents.Init(playerActionEvent, SurvivorService, MatchService)
+
 	-- Serviços futuros serão inicializados aqui:
-	-- KillerService.Init(...)
-	-- SurvivorService.Init(...)
 	-- GeneratorService.Init(...)
 	-- CaptureService.Init(...)
 	-- ObjectiveService.Init(...)
@@ -163,9 +182,17 @@ local function startServices()
 		MatchService.Start()
 	end)
 
+	-- KillerService.Start configura game loop do Rage
+	task.spawn(function()
+		KillerService.Start()
+	end)
+
+	-- SurvivorService.Start inicia listeners de habilidades
+	task.spawn(function()
+		SurvivorService.Start()
+	end)
+
 	-- Serviços futuros:
-	-- task.spawn(function() KillerService.Start() end)
-	-- task.spawn(function() SurvivorService.Start() end)
 	-- task.spawn(function() GeneratorService.Start() end)
 	-- task.spawn(function() CaptureService.Start() end)
 	-- task.spawn(function() ObjectiveService.Start() end)
@@ -215,6 +242,80 @@ local function wireServiceSignals()
 		end
 	end)
 
+	-- ==========================================
+	-- SINAIS DO KILLERSERVICE
+	-- ==========================================
+
+	-- Quando o Caçador causa dano
+	KillerService.DamageDealt:Connect(function(player: Player, target: Player, amount: number)
+		print(string.format("[CacadaSombria] Signal: DamageDealt — %s causou %.0f em %s",
+			player.Name, amount, target.Name))
+		-- Futuro: AudioService:PlayHitSound(target)
+		-- Futuro: efeitos visuais de sangue/impacto
+	end)
+
+	-- Quando a Fúria muda
+	KillerService.FuryChanged:Connect(function(player: Player, fury: number, maxFury: number)
+		-- Já notificado via UISyncEvent, mas podemos adicionar efeitos visuais aqui
+	end)
+
+	-- Quando o Rage é ativado
+	KillerService.RageActivated:Connect(function(player: Player)
+		print(string.format("[CacadaSombria] Signal: RageActivated — %s transformou!", player.Name))
+		-- Futuro: AudioService:PlayRageSound()
+		-- Futuro: efeitos visuais de transformação
+		-- Futuro: pausar timer da partida
+		-- TODO: MatchService:pauseMatchTimer()
+	end)
+
+	-- Quando o Rage termina
+	KillerService.RageEnded:Connect(function(player: Player)
+		print(string.format("[CacadaSombria] Signal: RageEnded — %s voltou ao normal", player.Name))
+		-- Futuro: AudioService:StopRageSound()
+		-- Futuro: reverter efeitos visuais
+		-- TODO: MatchService:resumeMatchTimer()
+	end)
+
+	-- Quando o Grito é usado
+	KillerService.GritoUsed:Connect(function(player: Player)
+		print(string.format("[CacadaSombria] Signal: GritoUsed — %s gritou!", player.Name))
+		-- Futuro: AudioService:PlayScreamSound()
+		-- Futuro: efeitos visuais de onda sonora
+	end)
+
+	-- Quando um Sobrevivente é puxado
+	KillerService.SurvivorPulled:Connect(function(killer: Player, survivor: Player)
+		print(string.format("[CacadaSombria] Signal: SurvivorPulled — %s puxou %s",
+			killer.Name, survivor.Name))
+		-- Futuro: AudioService:PlayPullSound()
+		-- Futuro: efeitos visuais do braço
+	end)
+
+	-- ==========================================
+	-- SINAIS DO SURVIVORSERVICE
+	-- ==========================================
+
+	-- Quando um Sobrevivente usa uma habilidade
+	SurvivorService.SurvivorUsedAbility:Connect(function(player: Player, abilityName: string)
+		print(string.format("[CacadaSombria] Signal: SurvivorUsedAbility — %s usou %s",
+			player.Name, abilityName))
+		-- Futuro: AudioService:PlayAbilitySound(abilityName)
+	end)
+
+	-- Quando um Sobrevivente é curado
+	SurvivorService.SurvivorHealed:Connect(function(player: Player, amount: number)
+		print(string.format("[CacadaSombria] Signal: SurvivorHealed — %s curou %d HP",
+			player.Name, amount))
+		-- Futuro: efeitos visuais de cura
+	end)
+
+	-- Quando um Sobrevivente recebe escudo (Adrenalina)
+	SurvivorService.SurvivorShielded:Connect(function(player: Player)
+		print(string.format("[CacadaSombria] Signal: SurvivorShielded — %s ganhou escudo",
+			player.Name))
+		-- Futuro: efeitos visuais de escudo
+	end)
+
 	print("[CacadaSombria] Sinais conectados.")
 end
 
@@ -244,6 +345,11 @@ local function main()
 
 	-- 5. Fase Start (assíncrono, cada serviço em sua thread)
 	startServices()
+
+	-- 6. Loop de atualização do SurvivorService (efeitos e cooldowns contínuos)
+	RunService.Heartbeat:Connect(function(dt: number)
+		SurvivorService:update(dt)
+	end)
 
 	print("[CacadaSombria] GameManager carregado e funcionando!")
 	print("[CacadaSombria] Aguardando jogadores...")

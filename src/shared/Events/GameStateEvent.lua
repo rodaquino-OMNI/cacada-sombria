@@ -43,6 +43,12 @@ GameStateEvent.MESSAGES = {
 
 	-- Resultado da partida
 	GAME_OVER = "GameOver",             -- params: winner ("Killer" | "Survivors")
+
+	-- Efeitos de controle (Épico E3 — Sobreviventes)
+	SILENCED = "Silenced",              -- params: duration (Caçador silenciado)
+	SLOWED = "Slowed",                  -- params: slowPercent, duration
+	STUNNED = "Stunned",                -- params: duration
+	KILLER_REVEALED = "KillerRevealed", -- params: killerPlayer, duration
 }
 
 -- ==========================================

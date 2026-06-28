@@ -15,12 +15,42 @@ GameConstants.Killers = {
     Speed = 26,
     SpeedRage = 28,
     Abilities = {
+      -- M1 — Tapa (ataque corpo a corpo)
       M1_Damage = 20,
       M1_Damage_Rage = 25,
-      Rage_Duration = 30,
-      Scream_Range_Slow = 60,      -- studs
-      Scream_Range_Reveal = 100,   -- studs
-      Scream_Reveal_Duration = 4,
+      M1_Range = 6,               -- studs de alcance
+      M1_Windup = 0.6,            -- segundos de preparação
+      M1_Recovery = 0.3,          -- segundos de recuperação
+      M1_Cooldown = 0.8,          -- segundos entre ataques
+
+      -- Q — Braço Esticado (puxão)
+      Braco_Esticado_Range = 40,  -- studs de alcance
+      Braco_Esticado_Width = 2,   -- studs de largura do projétil
+      Braco_Esticado_Windup = 0.4,
+      Braco_Esticado_Cooldown = 12,
+      Braco_Esticado_Stun = 0.5,  -- segundos de atordoamento ao puxar
+      Braco_Esticado_Pull_Distance = 4, -- studs de distância após puxar
+
+      -- Medidor de Fúria
+      Fury_Max = 100,
+      Fury_Gain_Dealing_Damage = 15,
+      Fury_Gain_Receiving_Damage = 10,
+      Fury_Gain_Rescue_Nearby = 20,
+      Fury_Rescue_Range = 40,     -- studs de alcance para ganhar fúria por resgate
+
+      -- R — Rage (Transformação)
+      Rage_Duration = 30,         -- segundos de duração
+      Rage_Speed = 28,            -- velocidade durante Rage
+      Rage_M1_Damage = 25,        -- dano do M1 durante Rage
+
+      -- E — Grito (Scream)
+      Grito_Windup = 0.8,
+      Grito_Cooldown = 25,
+      Grito_Slow_Range = 60,      -- studs para lentidão + blur
+      Grito_Slow_Duration = 3,    -- segundos de lentidão/blur
+      Grito_Slow_Percent = 0.4,   -- 40% de redução de velocidade
+      Grito_Reveal_Range = 100,   -- studs para revelação
+      Grito_Reveal_Duration = 4,  -- segundos de revelação
     }
   },
   BonecoDePano = {
