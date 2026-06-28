@@ -437,10 +437,10 @@ function ObjectiveService:tryEscape(player: Player, gateId: number): boolean
 
 	-- Verifica se o jogador é um Sobrevivente válido
 	local state = _matchService:getPlayerState(player)
-	if not state then return false
-	if state.role ~= "Survivor" then return false
-	if not state.isAlive then return false
-	if state.isInCage then return false
+	if not state then return false end
+	if state.role ~= "Survivor" then return false end
+	if not state.isAlive then return false end
+	if state.isInCage then return false end
 
 	-- Verifica distância até o portão
 	if state.character then
