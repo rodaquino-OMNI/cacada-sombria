@@ -1,0 +1,29 @@
+# Roblox
+*.rbxlx
+*.rbxl
+*.rbxmx
+*.rbxm
+
+# Rojo build artifacts
+build/
+.rbxl-build/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.luac
+
+# Dependencies (if using Wally)
+Packages/
+ServerPackages/
+DevPackages/
+
+# Environment
+.env
+.env.local
