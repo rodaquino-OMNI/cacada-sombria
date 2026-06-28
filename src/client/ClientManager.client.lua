@@ -32,13 +32,13 @@ local StarterGui = game:GetService("StarterGui")
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS DO CLIENTE
 -- ==========================================
-local InputManager = require(script.Input.InputManager)
-local CameraManager = require(script.Camera.CameraManager)
-local AudioManager = require(script.Audio.AudioManager)
-local SurvivorHUD = require(script.UI.SurvivorHUD)
-local KillerHUD = require(script.UI.KillerHUD)
-local CharacterSelectUI = require(script.UI.CharacterSelectUI)  -- Épico E7
-local GameOverUI = require(script.UI.GameOverUI)                -- Épico E7
+local InputManager = require(script.Parent.Input.InputManager)
+local CameraManager = require(script.Parent.Camera.CameraManager)
+local AudioManager = require(script.Parent.Audio.AudioManager)
+local SurvivorHUD = require(script.Parent.UI.SurvivorHUD)
+local KillerHUD = require(script.Parent.UI.KillerHUD)
+local CharacterSelectUI = require(script.Parent.UI.CharacterSelectUI)  -- Épico E7
+local GameOverUI = require(script.Parent.UI.GameOverUI)                -- Épico E7
 
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS COMPARTILHADOS

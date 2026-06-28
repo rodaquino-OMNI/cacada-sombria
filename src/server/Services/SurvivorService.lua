@@ -117,7 +117,7 @@ end
 
 -- Verifica se uma habilidade está fora de cooldown
 local function canUseAbility(state: any, abilityName: string): boolean
-	local cooldownEnd = state.cooldowns[abilityName] as number?
+	local cooldownEnd: number? = state.cooldowns[abilityName]
 	if not cooldownEnd then return true end
 	return os.clock() >= cooldownEnd
 end
