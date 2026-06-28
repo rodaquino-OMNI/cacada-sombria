@@ -306,14 +306,10 @@ end
 
 -- Registra listeners do servidor
 function KillerHUD:_registerEventListeners()
-	local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
-	if not eventsFolder then
-		warn("[CacadaSombria] KillerHUD: Pasta 'Events' não encontrada")
-		return
-	end
-
-	-- Listener do GameStateEvent (Fury, HP)
-	local gameStateEvent: RemoteEvent? = eventsFolder:FindFirstChild("GameStateEvent")
+	-- Usa utilitário seguro que garante RemoteEvent (não ModuleScript)
+	local RemoteEventUtils = require(ReplicatedStorage.Util.RemoteEventUtils)
+	local gameStateEvent = RemoteEventUtils.find("GameStateEvent")
+	local uiSyncEvent = RemoteEventUtils.find("UISyncEvent")
 	if gameStateEvent then
 		local conn1 = gameStateEvent.OnClientEvent:Connect(function(messageType: string, ...)
 			KillerHUD:_handleGameStateMessage(messageType, ...)
@@ -324,7 +320,6 @@ function KillerHUD:_registerEventListeners()
 	end
 
 	-- Listener do UISyncEvent (Cooldowns, Rage, Grito)
-	local uiSyncEvent: RemoteEvent? = eventsFolder:FindFirstChild("UISyncEvent")
 	if uiSyncEvent then
 		local conn2 = uiSyncEvent.OnClientEvent:Connect(function(messageType: string, ...)
 			KillerHUD:_handleUISyncMessage(messageType, ...)

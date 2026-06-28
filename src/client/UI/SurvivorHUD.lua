@@ -218,16 +218,12 @@ end
 
 -- Registra os handlers para mensagens do servidor via GameStateEvent
 function SurvivorHUD:_registerEventListeners()
-	-- Obtém o RemoteEvent GameStateEvent de ReplicatedStorage
-	local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
-	if not eventsFolder then
-		warn("[CacadaSombria] SurvivorHUD: Pasta 'Events' não encontrada em ReplicatedStorage")
-		return
-	end
-
-	local gameStateEvent: RemoteEvent? = eventsFolder:FindFirstChild("GameStateEvent")
+	-- Usa utilitário seguro que garante RemoteEvent (não ModuleScript)
+	local RemoteEventUtils = require(ReplicatedStorage.Util.RemoteEventUtils)
+	local gameStateEvent = RemoteEventUtils.find("GameStateEvent")
+	
 	if not gameStateEvent then
-		warn("[CacadaSombria] SurvivorHUD: GameStateEvent não encontrado")
+		warn("[CacadaSombria] SurvivorHUD: RemoteEvent GameStateEvent não encontrado")
 		return
 	end
 

@@ -84,14 +84,24 @@ local function getRemoteEvents()
 		return nil, nil
 	end
 
-	local gameStateEvent = eventsFolder:FindFirstChild("GameStateEvent")
-	local playerActionEvent = eventsFolder:FindFirstChild("PlayerActionEvent")
+	-- Busca RemoteEvents (não ModuleScripts de mesmo nome)
+	local gameStateEvent = nil
+	local playerActionEvent = nil
+	for _, child in eventsFolder:GetChildren() do
+		if child:IsA("RemoteEvent") then
+			if child.Name == "GameStateEvent" then
+				gameStateEvent = child
+			elseif child.Name == "PlayerActionEvent" then
+				playerActionEvent = child
+			end
+		end
+	end
 
 	if not gameStateEvent then
-		warn("[CacadaSombria] ClientManager: GameStateEvent não encontrado")
+		warn("[CacadaSombria] ClientManager: RemoteEvent GameStateEvent não encontrado")
 	end
 	if not playerActionEvent then
-		warn("[CacadaSombria] ClientManager: PlayerActionEvent não encontrado")
+		warn("[CacadaSombria] ClientManager: RemoteEvent PlayerActionEvent não encontrado")
 	end
 
 	return gameStateEvent, playerActionEvent

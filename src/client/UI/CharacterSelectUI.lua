@@ -99,11 +99,9 @@ function CharacterSelectUI.Init()
 		return
 	end
 
-	-- Obtém o PlayerActionEvent para enviar escolhas
-	local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
-	if eventsFolder then
-		_playerActionEvent = eventsFolder:FindFirstChild("PlayerActionEvent")
-	end
+	-- Obtém o PlayerActionEvent para enviar escolhas (RemoteEvent, não ModuleScript)
+	local RemoteEventUtils = require(ReplicatedStorage.Util.RemoteEventUtils)
+	_playerActionEvent = RemoteEventUtils.find("PlayerActionEvent")
 
 	-- Cria o ScreenGui (oculto inicialmente)
 	_screenGui = Instance.new("ScreenGui")
@@ -397,15 +395,11 @@ end
 
 -- Registra handlers para mensagens do servidor via GameStateEvent
 function CharacterSelectUI:_registerEventListeners()
-	local eventsFolder = ReplicatedStorage:FindFirstChild("Events")
-	if not eventsFolder then
-		warn("[CacadaSombria] CharacterSelectUI: Pasta 'Events' não encontrada")
-		return
-	end
-
-	local gameStateEvent: RemoteEvent? = eventsFolder:FindFirstChild("GameStateEvent")
+	local RemoteEventUtils = require(ReplicatedStorage.Util.RemoteEventUtils)
+	local gameStateEvent = RemoteEventUtils.find("GameStateEvent")
+	
 	if not gameStateEvent then
-		warn("[CacadaSombria] CharacterSelectUI: GameStateEvent não encontrado")
+		warn("[CacadaSombria] CharacterSelectUI: RemoteEvent GameStateEvent não encontrado")
 		return
 	end
 
