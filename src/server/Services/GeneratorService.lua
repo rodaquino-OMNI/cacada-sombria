@@ -624,12 +624,12 @@ function GeneratorService:_update(dt: number)
 			if gen.currentRepairer then
 				GeneratorService:cancelRepair(i, "gerador completado/inativo")
 			end
-			goto continue
+			goto skip
 		end
 
 		-- Se não há ninguém reparando, pula
 		if not gen.currentRepairer then
-			goto continue
+			goto skip
 		end
 
 		-- Verifica se o reparador ainda é válido
@@ -637,13 +637,13 @@ function GeneratorService:_update(dt: number)
 		local state = _matchService:getPlayerState(player)
 		if not state or not state.isAlive or state.isInCage then
 			GeneratorService:cancelRepair(i, "jogador inválido")
-			goto continue
+			goto skip
 		end
 
 		-- Verifica se o jogador se moveu (anti-cheat: WalkSpeed foi restaurado)
 		if state.humanoid and state.humanoid.WalkSpeed > 0 then
 			GeneratorService:cancelRepair(i, "jogador se moveu")
-			goto continue
+			goto skip
 		end
 
 		-- === PROGRESSO DE REPARO ===
@@ -693,7 +693,7 @@ function GeneratorService:_update(dt: number)
 			GeneratorService:_completeRepair(i)
 		end
 
-		::continue::
+		::skip::
 	end
 end
 

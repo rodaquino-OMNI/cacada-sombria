@@ -299,7 +299,7 @@ function CharacterSelectUI:_createClassCard(className: string, hp: number, speed
 	statsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 	statsLabel.TextSize = 13
 	statsLabel.Font = Enum.Font.Gotham
-	statsLabel.TextLineSpacing = 18
+	-- TextLineSpacing não é suportado em TextLabel no Roblox
 	statsLabel.Parent = card
 
 	-- Botão invisível para clique (cobre todo o card)
