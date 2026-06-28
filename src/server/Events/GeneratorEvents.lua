@@ -201,7 +201,10 @@ function GeneratorEvents:_handleInteract(player: Player, target: Instance?)
 
 	-- Se chegou aqui, o jogador pressionou E sem um alvo específico
 	-- Busca geradores próximos para iniciar reparo
-	GeneratorEvents:_tryNearbyGenerator(player) or GeneratorEvents:_tryNearbyGate(player)
+	local found = GeneratorEvents:_tryNearbyGenerator(player)
+	if not found then
+		GeneratorEvents:_tryNearbyGate(player)
+	end
 end
 
 -- ==========================================
