@@ -82,6 +82,54 @@ UISyncEvent.MESSAGES = {
 
 	-- Som de zumbido do gerador (para Sobreviventes próximos)
 	GENERATOR_BUZZ = "GeneratorBuzz",             -- params: generatorId, isActive (boolean)
+
+	-- ==========================================
+	-- ÁUDIO — Épico E8
+	-- ==========================================
+
+	-- Música dinâmica
+	MUSIC_START = "MusicStart",                   -- params: layer (number)
+	MUSIC_STOP = "MusicStop",                     -- sem parâmetros
+	MUSIC_CROSSFADE = "MusicCrossfade",           -- params: targetLayer (number), durationSec (number)
+
+	-- Batimentos cardíacos
+	HEARTBEAT_UPDATE = "HeartbeatUpdate",         -- params: volume (number, 0-1)
+	HEARTBEAT_STOP = "HeartbeatStop",             -- sem parâmetros
+
+	-- SFX e sons ambientes
+	PLAY_SFX = "PlaySFX",                         -- params: soundName (string), position (Vector3), volume (number?)
+	PLAY_AMBIENT = "PlayAmbient",                 -- params: soundName (string), position (Vector3)
+
+	-- ==========================================
+	-- CAPTURA — Épico E6
+	-- ==========================================
+
+	-- Barra de debate (wiggle) — Sobrevivente carregado
+	WIGGLE_PROGRESS = "WiggleProgress",            -- params: progress (0-100)
+
+	-- Timer de sangramento (bleed-out) — Sobrevivente derrubado
+	BLEED_OUT_TIMER = "BleedOutTimer",             -- params: secondsRemaining
+
+	-- Timer de eliminação na jaula
+	CAGE_TIMER = "CageTimer",                      -- params: secondsRemaining, maxTime
+
+	-- Progresso de resgate na jaula
+	RESCUE_PROGRESS = "RescueProgress",            -- params: progress (0-100), rescuerName
+
+	-- Início de canalização de resgate
+	RESCUE_START = "RescueStart",                  -- params: cageId, rescuerName
+
+	-- Resgate cancelado ou interrompido
+	RESCUE_STOP = "RescueStop",                    -- params: cageId, reason
+
+	-- Resgate concluído com sucesso
+	RESCUE_COMPLETE = "RescueComplete",            -- params: rescuedName, rescuerName
+
+	-- Indicador de estado de carregamento (Killer carregando)
+	CARRY_STATUS = "CarryStatus",                  -- params: isCarrying (boolean), survivorName (string?)
+
+	-- Contagem de resgates restantes por Sobrevivente
+	RESCUE_COUNT = "RescueCount",                  -- params: remainingRescues (number)
 }
 
 -- ==========================================

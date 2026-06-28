@@ -34,8 +34,11 @@ local StarterGui = game:GetService("StarterGui")
 -- ==========================================
 local InputManager = require(script.Input.InputManager)
 local CameraManager = require(script.Camera.CameraManager)
+local AudioManager = require(script.Audio.AudioManager)
 local SurvivorHUD = require(script.UI.SurvivorHUD)
 local KillerHUD = require(script.UI.KillerHUD)
+local CharacterSelectUI = require(script.UI.CharacterSelectUI)  -- Épico E7
+local GameOverUI = require(script.UI.GameOverUI)                -- Épico E7
 
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS COMPARTILHADOS
@@ -190,16 +193,18 @@ local function listenForRoleAssignment()
 			setupClientForRole(role, className)
 
 		elseif messageType == GameStateEvent.MESSAGES.GAME_OVER then
-			-- Partida terminou
+			-- Partida terminou — esconde HUDs, mostra GameOverUI
 			local winner: string = select(1, ...)
+			local reason: string? = select(2, ...)
+			local matchStats: any? = select(3, ...)
 			print(string.format("[CacadaSombria] Fim de jogo! Vencedor: %s", winner))
 
-			-- Mostra a tela de resultado (futuro: GameOverUI)
-			StarterGui:SetCore("SendNotification", {
-				Title = "Fim de Jogo!",
-				Text = "Vencedor: " .. winner,
-				Duration = 5,
-			})
+			-- Esconde HUDs de jogo
+			SurvivorHUD:hide()
+			KillerHUD:hide()
+
+			-- Mostra a tela de resultado
+			GameOverUI:showResult(winner, reason, matchStats)
 
 		elseif messageType == GameStateEvent.MESSAGES.PREPARE_COUNTDOWN then
 			-- Contagem regressiva antes da caçada
@@ -209,6 +214,46 @@ local function listenForRoleAssignment()
 				Text = "A caçada começa em " .. seconds .. "s",
 				Duration = 1,
 			})
+
+		elseif messageType == GameStateEvent.MESSAGES.CHARACTER_SELECT then
+			-- Fase de seleção de personagem iniciou — mostra CharacterSelectUI
+			SurvivorHUD:hide()
+			KillerHUD:hide()
+			CharacterSelectUI:show()
+
+		elseif messageType == GameStateEvent.MESSAGES.MATCH_STATE then
+			-- Estado da partida mudou
+			local newState: string = select(1, ...)
+			print(string.format("[CacadaSombria] Estado da partida: %s", newState))
+			-- Se saiu da seleção, esconde a tela de seleção
+			if newState == "Preparing" or newState == "Hunting" then
+				CharacterSelectUI:hide()
+			end
+
+		elseif messageType == GameStateEvent.MESSAGES.SELECT_TIMER then
+			-- Timer da seleção (já tratado internamente pelo CharacterSelectUI)
+
+		elseif messageType == GameStateEvent.MESSAGES.CHARACTER_SELECTED then
+			-- Outro jogador escolheu classe (já tratado internamente)
+
+		elseif messageType == GameStateEvent.MESSAGES.LOBBY_UPDATE then
+			-- Atualização do lobby (já tratado internamente)
+
+		elseif messageType == GameStateEvent.MESSAGES.HOST_ASSIGNED then
+			-- Jogador foi designado como host
+			local isHost: boolean = select(1, ...)
+			if isHost then
+				print("[CacadaSombria] Você é o HOST do lobby!")
+				StarterGui:SetCore("SendNotification", {
+					Title = "Lobby",
+					Text = "Você é o HOST! Pressione 'Iniciar' quando todos estiverem prontos.",
+					Duration = 5,
+				})
+			end
+
+		elseif messageType == "KillerAssigned" then
+			local killerName: string = select(1, ...)
+			print(string.format("[CacadaSombria] Caçador atribuído: %s", killerName))
 		end
 	end)
 
@@ -249,23 +294,30 @@ local function main()
 	-- 1. Aguarda o jogo carregar completamente
 	waitForGameLoaded()
 
-	-- 2. Escuta atribuição de papel do servidor
+	-- 2. Inicializa o sistema de áudio (antes de qualquer outra coisa)
+	AudioManager.Init()
+
+	-- 3. Inicializa as UIs de lobby e resultado (Épico E7)
+	CharacterSelectUI.Init()
+	GameOverUI.Init()
+
+	-- 4. Escuta atribuição de papel do servidor
 	listenForRoleAssignment()
 
-	-- 3. Registra handler de spawn de character
+	-- 5. Registra handler de spawn de character
 	player.CharacterAdded:Connect(onCharacterAdded)
 
-	-- 4. Se o character já existe (ex: respawn), configura agora
+	-- 6. Se o character já existe (ex: respawn), configura agora
 	if player.Character then
 		onCharacterAdded(player.Character)
 	end
 
-	-- 5. Configurações iniciais de UI
+	-- 7. Configurações iniciais de UI
 	-- Reseta o StarterGui para estado limpo
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true) -- Chat sempre ativo
 
-	-- 6. Tenta obter papel via RemoteFunction (GetMatchInfo)
+	-- 8. Tenta obter papel via RemoteFunction (GetMatchInfo)
 	-- Isso é útil se o servidor já atribuiu o papel antes do cliente carregar
 	task.spawn(function()
 		local functionsFolder = ReplicatedStorage:FindFirstChild("Functions")

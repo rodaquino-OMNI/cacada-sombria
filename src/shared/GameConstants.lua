@@ -175,11 +175,43 @@ GameConstants.Survivors = {
 -- GAME RULES
 -- ==========================================
 GameConstants.Game = {
-  SurvivorsPerMatch = 4,
-  GeneratorsToRepair = 5,
-  RepairTime = 8,                  -- seconds per generator (solo)
-  MaxCageRescues = 2,              -- times a survivor can be caged
-  MatchDuration = 900,             -- 15 minutes
+	SurvivorsPerMatch = 4,
+	GeneratorsToRepair = 5,
+	RepairTime = 8,                  -- seconds per generator (solo)
+	MaxCageRescues = 2,              -- times a survivor can be caged
+	MatchDuration = 900,             -- 15 minutes
+}
+
+-- ==========================================
+-- CAPTURA — Épico E6
+-- ==========================================
+GameConstants.Capture = {
+	-- Estado de Derrubado (Down)
+	DownBleedOutTime = 60,           -- segundos até morte automática
+	DownMoveSpeedMultiplier = 0.3,   -- 30% da velocidade base ao ser derrubado
+
+	-- Transporte (Carry)
+	CarryPickupTime = 1.5,           -- segundos para o Killer pegar o Sobrevivente
+	CarryKillerSpeedMultiplier = 0.8,-- 80% da velocidade do Killer ao carregar
+	CarryCanAttack = false,          -- Killer não pode atacar enquanto carrega
+	WiggleTimeToBreak = 10,          -- segundos para o Sobrevivente se libertar
+	WiggleBreakStunDuration = 2,     -- segundos de atordoamento no Killer ao se libertar
+
+	-- Jaulas
+	CageTotalPositions = 5,          -- posições fixas no mapa
+	CageActivePerMatch = 3,          -- jaulas ativas por partida
+	CageDepositTime = 2,             -- segundos para depositar o Sobrevivente
+	CageEliminationTime = 120,       -- segundos até eliminação na jaula
+	CageMaxRescuesPerSurvivor = 2,   -- máximo de resgates por Sobrevivente (espelho de Game.MaxCageRescues)
+
+	-- Resgate
+	RescueChannelTime = 3,           -- segundos de canalização para resgatar
+	RescueHPRestorePercent = 0.5,    -- 50% do HP máximo restaurado
+	RescueInvulnerabilityTime = 3,   -- segundos de invulnerabilidade após resgate
+
+	-- Integração com Fúria
+	FuryRescueGain = 20,             -- Fúria ganha pelo Killer ao presenciar resgate
+	FuryRescueRange = 40,            -- studs de alcance para ganhar Fúria por resgate próximo
 }
 
 -- ==========================================

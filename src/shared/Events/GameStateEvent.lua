@@ -63,6 +63,22 @@ GameStateEvent.MESSAGES = {
 	SLOWED = "Slowed",                  -- params: slowPercent, duration
 	STUNNED = "Stunned",                -- params: duration
 	KILLER_REVEALED = "KillerRevealed", -- params: killerPlayer, duration
+
+	-- Captura — Épico E6
+	DOWN_STATE = "DownState",               -- params: isDowned (boolean), bleedOutTime (number)
+	CARRIED_STATE = "CarriedState",         -- params: isCarried (boolean), carriedBy (string?)
+	CAGE_STATE = "CageState",               -- params: isInCage (boolean), cageId (number?), eliminationTime (number?)
+	CAGE_SURVIVOR_ELIMINATED = "CageSurvivorEliminated", -- params: playerName (Sobrevivente eliminado na jaula)
+	RESCUED = "Rescued",                    -- params: rescuedPlayerName, rescuerPlayerName
+	WIGGLE_BREAK = "WiggleBreak",           -- params: survivorName (Sobrevivente se libertou do carregamento)
+
+	-- Lobby e Seleção de Personagem (Épico E7)
+	LOBBY_UPDATE = "LobbyUpdate",       -- params: lobbyData (tabela serializável)
+	CHARACTER_SELECT = "CharacterSelect", -- params: availableClasses (tabela)
+	CHARACTER_SELECTED = "CharacterSelected", -- params: playerName, className
+	HOST_ASSIGNED = "HostAssigned",     -- params: isHost (boolean)
+	SELECT_START = "SelectStart",       -- inicia tela de seleção de personagem
+	SELECT_TIMER = "SelectTimer",       -- params: secondsRemaining
 }
 
 -- ==========================================

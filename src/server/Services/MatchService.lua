@@ -46,6 +46,7 @@ local PREPARE_DURATION = 5             -- 5 segundos de preparação
 -- ==========================================
 local MatchState = {
 	Waiting = "Waiting",       -- Aguardando jogadores no lobby
+	Selecting = "Selecting",   -- Seleção de personagens (Épico E7)
 	Preparing = "Preparing",   -- Timer de preparação antes da caçada
 	Hunting = "Hunting",       -- Caçada ativa (loop principal)
 	Ending = "Ending",         -- Resultado, retorna ao lobby
@@ -57,7 +58,8 @@ local MatchState = {
 -- Cada estado só pode transitar para os estados listados aqui.
 -- Isso evita bugs de transições impossíveis (ex: Ending → Hunting).
 local VALID_TRANSITIONS: {[string]: {string}} = {
-	[MatchState.Waiting]   = {MatchState.Preparing},
+	[MatchState.Waiting]   = {MatchState.Selecting},
+	[MatchState.Selecting] = {MatchState.Preparing, MatchState.Waiting},
 	[MatchState.Preparing] = {MatchState.Hunting},
 	[MatchState.Hunting]   = {MatchState.Ending},
 	[MatchState.Ending]    = {MatchState.Waiting},
@@ -77,7 +79,12 @@ MatchService.MatchStarted = Signal.new()
 MatchService.MatchEnded = Signal.new()
 MatchService.PlayerRoleAssigned = Signal.new()
 MatchService.PlayerDied = Signal.new()
+MatchService.PlayerDowned = Signal.new()    -- Épico E6: Sobrevivente derrubado (HP=0, mas ainda vivo)
 MatchService.StaminaChanged = Signal.new()
+MatchService.SelectStarted = Signal.new()          -- Épico E7: fase de seleção iniciou
+MatchService.SelectTimerExpired = Signal.new()     -- Épico E7: timer de seleção esgotou
+MatchService.PlayerDisconnected = Signal.new()     -- Épico E7: jogador desconectou
+MatchService.ReturnToLobby = Signal.new()          -- Épico E7: retorno ao lobby após partida
 
 -- ==========================================
 -- ESTADO INTERNO
@@ -126,6 +133,16 @@ local _matchTimeRemaining: number = MATCH_DURATION
 --     isRageActive: boolean,                 -- apenas Killer
 --     cooldowns: {[string]: number},         -- nome_habilidade → timestamp de quando expira
 --     connections: {RBXScriptConnection},    -- conexões para cleanup
+--
+--     -- Épico E6: Captura
+--     isCarrying: boolean?,                  -- Killer está carregando Sobrevivente?
+--     carriedSurvivorId: number?,            -- UserId do Sobrevivente carregado
+--     carriedByKillerId: number?,            -- UserId do Killer que carrega (Sobrevivente)
+--     bleedOutTimer: number?,                -- tempo restante de sangramento (derrubado)
+--     cageRescueCount: number,               -- resgates de jaula já recebidos
+--     wiggleProgress: number,                -- progresso do debate (0 a 100)
+--     isInvincible: boolean?,                -- invulnerável temporário
+--     invincibleTimer: number?,              -- timestamp do fim da invulnerabilidade
 -- }
 
 -- ==========================================
@@ -211,6 +228,16 @@ function MatchService:_onPlayerAdded(player: Player)
 		isRageActive = false,
 		cooldowns = {},
 		connections = {},
+
+		-- Épico E6: Captura
+		isCarrying = false,              -- Killer está carregando um Sobrevivente?
+		carriedSurvivorId = nil,         -- UserId do Sobrevivente carregado (Killer)
+		carriedByKillerId = nil,         -- UserId do Killer que está carregando (Sobrevivente)
+		bleedOutTimer = nil,             -- tempo restante de sangramento (Sobrevivente derrubado)
+		cageRescueCount = 0,             -- quantas vezes este Sobrevivente foi resgatado da jaula
+		wiggleProgress = 0,              -- progresso do debate (0 a 100)
+		isInvincible = false,            -- invulnerável após resgate
+		invincibleTimer = nil,           -- timestamp até o fim da invulnerabilidade
 	}
 end
 
@@ -249,8 +276,14 @@ end
 function MatchService:_onPlayerRemoving(player: Player)
 	print(string.format("[CacadaSombria] Jogador saiu: %s", player.Name))
 
-	-- Limpa as conexões do jogador
 	local state = _playerStates[player.UserId]
+
+	-- Dispara sinal de desconexão ANTES de limpar o estado
+	if state then
+		MatchService.PlayerDisconnected:Fire(player, state.role, _currentState)
+	end
+
+	-- Limpa as conexões do jogador
 	if state and state.connections then
 		for _, conn in state.connections do
 			conn:Disconnect()
@@ -359,7 +392,9 @@ function MatchService:transitionTo(newState: string): boolean
 	print(string.format("[CacadaSombria] Estado da partida: %s → %s", oldState, newState))
 
 	-- Ações específicas para cada transição
-	if newState == MatchState.Preparing then
+	if newState == MatchState.Selecting then
+		MatchService:_onEnterSelecting()
+	elseif newState == MatchState.Preparing then
 		MatchService:_onEnterPreparing()
 	elseif newState == MatchState.Hunting then
 		MatchService:_onEnterHunting()
@@ -378,6 +413,20 @@ function MatchService:transitionTo(newState: string): boolean
 end
 
 -- Handlers de entrada para cada estado
+
+function MatchService:_onEnterSelecting()
+	print("[CacadaSombria] Fase de SELEÇÃO iniciada — jogadores escolhem personagens (15s)")
+	-- A seleção tem 15 segundos. Quem não escolher recebe classe aleatória.
+	-- O LobbyService gerencia a lógica detalhada; aqui apenas disparamos o timer.
+	task.delay(15, function()
+		if _currentState == MatchState.Selecting then
+			print("[CacadaSombria] Timer de seleção esgotado — atribuindo classes não escolhidas")
+			-- LobbyService:forceAssignUnselected() — será chamado via sinal
+			MatchService.SelectTimerExpired:Fire()
+		end
+	end)
+	MatchService.SelectStarted:Fire()
+end
 
 function MatchService:_onEnterPreparing()
 	print("[CacadaSombria] Fase de PREPARAÇÃO iniciada — aguardando 5s...")
@@ -412,6 +461,8 @@ function MatchService:_onEnterWaiting()
 	print("[CacadaSombria] Retornando ao lobby. Aguardando jogadores...")
 	-- Limpa estados dos jogadores
 	MatchService:_resetAllPlayerStates()
+	-- Dispara sinal de retorno ao lobby (Épico E7)
+	MatchService.ReturnToLobby:Fire()
 end
 
 -- Reseta o estado de todos os jogadores para uma nova partida
@@ -433,6 +484,16 @@ function MatchService:_resetAllPlayerStates()
 		state.fury = 0
 		state.isRageActive = false
 		table.clear(state.cooldowns)
+
+		-- Épico E6: resetar estado de captura
+		state.isCarrying = false
+		state.carriedSurvivorId = nil
+		state.carriedByKillerId = nil
+		state.bleedOutTimer = nil
+		state.cageRescueCount = 0
+		state.wiggleProgress = 0
+		state.isInvincible = false
+		state.invincibleTimer = nil
 	end
 end
 
@@ -446,6 +507,12 @@ end
 function MatchService:_consumeStamina(state: any, dt: number)
 	-- Apenas Sobreviventes têm stamina
 	if state.role ~= "Survivor" then return end
+
+	-- Sobrevivente derrubado não pode correr
+	if state.isDowned then
+		state.isSprinting = false
+		return
+	end
 
 	-- Se não está correndo, regenera stamina
 	if not state.isSprinting then
@@ -524,10 +591,16 @@ function MatchService:_handlePlayerAction(player: Player, action: string, ...: a
 
 	-- 2. O jogador está vivo?
 	if not state.isAlive then
-		-- Apenas ações permitidas quando morto/derrubado
-		if action ~= "Wiggle" then -- "Wiggle" = debate na jaula (Épico E6)
+		-- Apenas ações permitidas quando morto
+		if action ~= "Wiggle" then
 			return
 		end
+	end
+
+	-- 2b. O jogador está derrubado (Down)?
+	-- Apenas a ação Wiggle é permitida enquanto derrubado
+	if state.isDowned and action ~= "Wiggle" then
+		return
 	end
 
 	-- 3. O jogador está em jaula?
@@ -569,6 +642,12 @@ function MatchService:_handlePlayerAction(player: Player, action: string, ...: a
 		local target: Instance = ...
 		MatchService:_handleInteract(state, target)
 
+	elseif action == "CarryPickup" or action == "CageDeposit"
+		or action == "RescueStart" or action == "Wiggle" then
+		-- Ações de captura — tratadas pelo CaptureEvents (Épico E6)
+		-- MatchService apenas as reconhece; não faz processamento adicional
+		return
+
 	else
 		-- Ação não reconhecida
 		warn(string.format("[CacadaSombria] Ação não reconhecida: '%s' de %s", action, player.Name))
@@ -590,6 +669,9 @@ end
 function MatchService:_handleSprintStart(state: any)
 	-- Apenas Sobreviventes podem correr
 	if state.role ~= "Survivor" then return end
+
+	-- Derrubado não pode correr
+	if state.isDowned then return end
 
 	-- Verifica se está exausto
 	if state.isExhausted then
@@ -790,6 +872,9 @@ function MatchService:applyDamage(player: Player, amount: number)
 	if not state then return end
 	if not state.isAlive then return end
 
+	-- Se o jogador já está derrubado, não recebe mais dano
+	if state.isDowned then return end
+
 	state.hp = math.max(0, state.hp - amount)
 
 	-- Notifica o cliente sobre o HP atualizado
@@ -803,12 +888,22 @@ function MatchService:applyDamage(player: Player, amount: number)
 		)
 	end
 
-	-- Verifica se o jogador foi derrubado
+	-- Verifica se o jogador foi derrubado (HP = 0)
 	if state.hp <= 0 then
-		state.isAlive = false
-		state.isDowned = true
-		MatchService.PlayerDied:Fire(player)
-		print(string.format("[CacadaSombria] %s foi derrubado!", player.Name))
+		if state.role == "Survivor" then
+			-- Sobrevivente entra em estado de "Derrubado" (Down)
+			-- Continua vivo (isAlive = true), mas incapacitado
+			state.isDowned = true
+			-- isAlive permanece true — o Sobrevivente só morre após bleed-out ou jaula
+			MatchService.PlayerDowned:Fire(player)
+			print(string.format("[CacadaSombria] %s foi derrubado! (estado Down)", player.Name))
+		else
+			-- Killer não entra em down state, morre diretamente
+			state.isAlive = false
+			state.isDowned = true
+			MatchService.PlayerDied:Fire(player)
+			print(string.format("[CacadaSombria] %s foi derrotado!", player.Name))
+		end
 	end
 end
 
@@ -920,6 +1015,116 @@ function MatchService:getDistanceBetween(player1: Player, player2: Player): numb
 	if not root1 or not root2 then return nil end
 
 	return (root1.Position - root2.Position).Magnitude
+end
+
+-- ==========================================
+-- FUNÇÕES DE CAPTURA — Épico E6
+-- ==========================================
+
+-- Elimina definitivamente um jogador (morte final)
+-- Usado quando o bleed-out expira ou o timer da jaula zera
+-- @param player — O jogador a ser eliminado
+function MatchService:killPlayer(player: Player)
+	local state = _playerStates[player.UserId]
+	if not state then return end
+
+	state.isAlive = false
+	state.isDowned = false
+	state.isInCage = false
+	state.bleedOutTimer = nil
+
+	-- Libera o personagem se estava sendo carregado
+	if state.carriedByKillerId then
+		local killerState = _playerStates[state.carriedByKillerId]
+		if killerState then
+			killerState.isCarrying = false
+			killerState.carriedSurvivorId = nil
+		end
+		state.carriedByKillerId = nil
+	end
+
+	-- Se era o Killer carregando alguém, libera o Sobrevivente
+	if state.isCarrying and state.carriedSurvivorId then
+		local survivorState = _playerStates[state.carriedSurvivorId]
+		if survivorState then
+			survivorState.carriedByKillerId = nil
+		end
+		state.isCarrying = false
+		state.carriedSurvivorId = nil
+	end
+
+	MatchService.PlayerDied:Fire(player)
+	print(string.format("[CacadaSombria] %s foi ELIMINADO definitivamente.", player.Name))
+end
+
+-- Restaura um Sobrevivente após resgate da jaula
+-- @param player — O Sobrevivente resgatado
+-- @param hpPercent — Percentual do HP máximo a restaurar (ex: 0.5 = 50%)
+function MatchService:respawnPlayer(player: Player, hpPercent: number?)
+	local state = _playerStates[player.UserId]
+	if not state then return end
+
+	hpPercent = hpPercent or 1.0
+
+	state.isAlive = true
+	state.isDowned = false
+	state.isInCage = false
+	state.bleedOutTimer = nil
+	state.hp = math.floor(state.maxHp * hpPercent)
+	state.wiggleProgress = 0
+
+	-- Remove do estado de carregamento
+	state.carriedByKillerId = nil
+
+	print(string.format("[CacadaSombria] %s foi restaurado com %.0f%% HP (%.0f/%.0f).",
+		player.Name, hpPercent * 100, state.hp, state.maxHp))
+end
+
+-- Define o Killer como carregando um Sobrevivente
+-- @param killer — O Caçador
+-- @param survivor — O Sobrevivente derrubado (ou nil para liberar)
+function MatchService:setPlayerCarrying(killer: Player, survivor: Player?)
+	local killerState = _playerStates[killer.UserId]
+	if not killerState then return end
+
+	if survivor then
+		killerState.isCarrying = true
+		killerState.carriedSurvivorId = survivor.UserId
+
+		local survivorState = _playerStates[survivor.UserId]
+		if survivorState then
+			survivorState.carriedByKillerId = killer.UserId
+		end
+	else
+		-- Libera o Sobrevivente que estava sendo carregado
+		if killerState.carriedSurvivorId then
+			local survivorState = _playerStates[killerState.carriedSurvivorId]
+			if survivorState then
+				survivorState.carriedByKillerId = nil
+			end
+		end
+		killerState.isCarrying = false
+		killerState.carriedSurvivorId = nil
+	end
+end
+
+-- Retorna se um jogador está derrubado (down)
+function MatchService:isPlayerDowned(player: Player): boolean
+	local state = _playerStates[player.UserId]
+	return state ~= nil and state.isDowned == true
+end
+
+-- Retorna se um jogador está carregando um Sobrevivente
+function MatchService:isPlayerCarrying(player: Player): boolean
+	local state = _playerStates[player.UserId]
+	return state ~= nil and state.isCarrying == true
+end
+
+-- Retorna o UserId do Sobrevivente que o Killer está carregando
+function MatchService:getCarriedSurvivorId(player: Player): number?
+	local state = _playerStates[player.UserId]
+	if not state or not state.isCarrying then return nil end
+	return state.carriedSurvivorId
 end
 
 -- ==========================================

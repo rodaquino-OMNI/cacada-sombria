@@ -51,6 +51,12 @@ PlayerActionEvent.ACTIONS = {
 
 	-- Caçador específico
 	KILLER_M1 = "KillerM1",        -- ataque básico do Caçador (clique esquerdo)
+
+	-- Captura — Épico E6
+	CARRY_PICKUP = "CarryPickup",    -- Killer pega Sobrevivente derrubado
+	CAGE_DEPOSIT = "CageDeposit",    -- Killer deposita Sobrevivente carregado na jaula
+	RESCUE_START = "RescueStart",    -- Sobrevivente inicia resgate de aliado na jaula
+	WIGGLE = "Wiggle",              -- Sobrevivente carregado debate para se libertar
 }
 
 -- ==========================================

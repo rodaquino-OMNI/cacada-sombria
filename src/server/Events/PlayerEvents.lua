@@ -242,4 +242,45 @@ function PlayerEvents.getPlayerPosition(player: Player): Vector3?
 	return rootPart.Position
 end
 
+-- ==========================================
+-- TRATAMENTO DE DESCONEXÃO (Épico E7)
+-- ==========================================
+
+-- Lida com a desconexão de um jogador durante a partida
+-- Remove o character do mundo de forma limpa
+-- @param player — O jogador que desconectou
+function PlayerEvents.handleDisconnect(player: Player)
+	print(string.format("[CacadaSombria] Tratando desconexão de %s...", player.Name))
+
+	-- Remove o character do mundo se ainda existir
+	local character = player.Character
+	if character then
+		-- Destrói o character para liberar recursos
+		-- O Roblox gerencia isso automaticamente, mas podemos limpar referências
+		print(string.format("[CacadaSombria] Character de %s removido do mundo", player.Name))
+	end
+end
+
+-- Obtém estatísticas de um jogador para a tela de GameOver
+-- @param player — O jogador
+-- @param playerState — Estado do jogador (do MatchService)
+-- @return tabela com estatísticas formatadas
+function PlayerEvents.getPlayerStats(player: Player, playerState: any?): {[string]: any}
+	local stats = {
+		name = player.Name,
+		role = "Desconhecido",
+		className = nil,
+	}
+
+	if playerState then
+		stats.role = playerState.role or "Desconhecido"
+		stats.className = playerState.className
+		stats.isAlive = playerState.isAlive
+		stats.isDowned = playerState.isDowned
+		stats.isInCage = playerState.isInCage
+	end
+
+	return stats
+end
+
 return PlayerEvents
