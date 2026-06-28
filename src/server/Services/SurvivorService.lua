@@ -1605,13 +1605,13 @@ function SurvivorService:_handleCampeaoAgarrao(state: any)
 			survState = {}
 			_survivorState[state.userId] = survState
 		end
-		survState.agarrãoOriginalSpeed = state.humanoid.WalkSpeed
-		state.humanoid.WalkSpeed = (survState.agarrãoOriginalSpeed or GameConstants.Survivors.Campeao.Speed) * 0.5
+		survState.agarraoOriginalSpeed = state.humanoid.WalkSpeed
+		state.humanoid.WalkSpeed = (survState.agarraoOriginalSpeed or GameConstants.Survivors.Campeao.Speed) * 0.5
 
 		task.delay(2, function()
 			local currentState = _matchService:getPlayerState(state.player)
 			if currentState and currentState.humanoid then
-				currentState.humanoid.WalkSpeed = survState.agarrãoOriginalSpeed or GameConstants.Survivors.Campeao.Speed
+				currentState.humanoid.WalkSpeed = survState.agarraoOriginalSpeed or GameConstants.Survivors.Campeao.Speed
 			end
 		end)
 	end

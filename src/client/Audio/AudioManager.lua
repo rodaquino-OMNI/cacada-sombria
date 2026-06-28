@@ -502,9 +502,18 @@ function AudioManager.Init()
 		return
 	end
 	
-	local uiSyncEvent = eventsFolder:FindFirstChild("UISyncEvent")
+	-- Busca o RemoteEvent (não o ModuleScript de mesmo nome)
+	-- IMPORTANTE: FindFirstChild pode retornar o ModuleScript UISyncEvent.lua
+	-- Precisamos especificamente do RemoteEvent criado pelo servidor
+	local uiSyncEvent = nil
+	for _, child in eventsFolder:GetChildren() do
+		if child:IsA("RemoteEvent") and child.Name == "UISyncEvent" then
+			uiSyncEvent = child
+			break
+		end
+	end
 	if not uiSyncEvent then
-		warn("[CacadaSombria] AudioManager: UISyncEvent não encontrado")
+		warn("[CacadaSombria] AudioManager: RemoteEvent UISyncEvent não encontrado")
 		return
 	end
 	
