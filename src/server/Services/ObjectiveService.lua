@@ -428,7 +428,7 @@ function ObjectiveService:tryEscape(player: Player, gateId: number): boolean
 	if _victoryDeclared then return false end
 
 	local gate = _gates[gateId]
-	if not gate then return false
+	if not gate then return false end
 
 	-- O portão precisa estar aberto
 	if gate.state ~= GateState.Opened then

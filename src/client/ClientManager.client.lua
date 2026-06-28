@@ -32,13 +32,14 @@ local StarterGui = game:GetService("StarterGui")
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS DO CLIENTE
 -- ==========================================
-local InputManager = require(script.Parent.Input.InputManager)
-local CameraManager = require(script.Parent.Camera.CameraManager)
-local AudioManager = require(script.Parent.Audio.AudioManager)
-local SurvivorHUD = require(script.Parent.UI.SurvivorHUD)
-local KillerHUD = require(script.Parent.UI.KillerHUD)
-local CharacterSelectUI = require(script.Parent.UI.CharacterSelectUI)  -- Épico E7
-local GameOverUI = require(script.Parent.UI.GameOverUI)                -- Épico E7
+-- Usa WaitForChild para aguardar clonagem das pastas (Roblox timing)
+local InputManager = require(script.Parent:WaitForChild("Input", 10):WaitForChild("InputManager", 10))
+local CameraManager = require(script.Parent:WaitForChild("Camera", 10):WaitForChild("CameraManager", 10))
+local AudioManager = require(script.Parent:WaitForChild("Audio", 10):WaitForChild("AudioManager", 10))
+local SurvivorHUD = require(script.Parent:WaitForChild("UI", 10):WaitForChild("SurvivorHUD", 10))
+local KillerHUD = require(script.Parent:WaitForChild("UI", 10):WaitForChild("KillerHUD", 10))
+local CharacterSelectUI = require(script.Parent:WaitForChild("UI", 10):WaitForChild("CharacterSelectUI", 10))
+local GameOverUI = require(script.Parent:WaitForChild("UI", 10):WaitForChild("GameOverUI", 10))
 
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS COMPARTILHADOS
