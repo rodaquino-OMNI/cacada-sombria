@@ -29,6 +29,7 @@ local Workspace = game:GetService("Workspace")
 -- DEPENDÊNCIAS
 -- ==========================================
 local GameConstants = require(ReplicatedStorage.GameConstants)
+local MansionData = require(ReplicatedStorage.MapData.MansionData)
 local Signal = require(ReplicatedStorage.Util.Signal)
 local GameStateEvent = require(ReplicatedStorage.Events.GameStateEvent)
 local UISyncEvent = require(ReplicatedStorage.Events.UISyncEvent)
@@ -38,16 +39,11 @@ local UISyncEvent = require(ReplicatedStorage.Events.UISyncEvent)
 -- ==========================================
 local CAP = GameConstants.Capture
 
--- Posições das 5 jaulas no mapa (studs)
--- Serão ajustadas quando o mapa real estiver pronto (Épico E4)
--- Coordenadas relativas ao centro da Mansão Abandonada
-local CAGE_POSITIONS: {Vector3} = {
-	Vector3.new(30, 0, 20),    -- Jaula 1 — Salão Principal
-	Vector3.new(-25, 0, 15),   -- Jaula 2 — Biblioteca
-	Vector3.new(10, -5, -30),  -- Jaula 3 — Porão
-	Vector3.new(-20, 0, -20),  -- Jaula 4 — Cozinha
-	Vector3.new(0, 5, 0),      -- Jaula 5 — Sótão
-}
+-- Posições das jaulas no mapa (MansionData.Cages — fonte canônica)
+local CAGE_POSITIONS: {Vector3} = {}
+for _, cageData in MansionData.Cages do
+	CAGE_POSITIONS[cageData.id] = cageData.position
+end
 
 -- ==========================================
 -- ESTADOS DE JAULA

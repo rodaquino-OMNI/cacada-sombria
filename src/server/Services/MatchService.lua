@@ -33,10 +33,11 @@ local GameStateEvent = require(ReplicatedStorage.Events.GameStateEvent)
 -- ==========================================
 -- CONSTANTES
 -- ==========================================
-local STAMINA_MAX = 100
-local STAMINA_CONSUME_RATE = 20        -- por segundo correndo
-local STAMINA_REGEN_RATE = 10          -- por segundo parado/andando
-local STAMINA_EXHAUSTED_COOLDOWN = 3   -- segundos sem poder correr após esgotar
+local STAMINA = GameConstants.Game.Stamina
+local STAMINA_MAX = STAMINA.Stamina_Max
+local STAMINA_CONSUME_RATE = STAMINA.Stamina_Consume_Rate
+local STAMINA_REGEN_RATE = STAMINA.Stamina_Regen_Rate
+local STAMINA_EXHAUSTED_COOLDOWN = STAMINA.Stamina_Exhausted_Cooldown
 
 local MATCH_DURATION = GameConstants.Game.MatchDuration -- 900s (15 min)
 local PREPARE_DURATION = 5             -- 5 segundos de preparação

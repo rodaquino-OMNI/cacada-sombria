@@ -458,8 +458,8 @@ function LobbyService:_assignAllRoles()
 
 	for userId, data in _lobbyPlayers do
 		if userId == _killerUserId then
-			-- Atribui como Caçador
-			_matchService:assignRole(data.player, "Killer", nil)
+			-- Atribui como Caçador (classe padrão: Distorcido)
+			_matchService:assignRole(data.player, "Killer", "Distorcido")
 			print(string.format("[CacadaSombria] %s → CAÇADOR (O Distorcido)", data.player.Name))
 		else
 			-- Atribui como Sobrevivente com a classe escolhida (ou aleatória se não escolheu)

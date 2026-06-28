@@ -32,49 +32,8 @@ local UISyncEvent = require(ReplicatedStorage.Events.UISyncEvent)
 local PlayerActionEvent = require(ReplicatedStorage.Events.PlayerActionEvent)
 
 -- ==========================================
--- CONSTANTES DE COOLDOWN (segundos)
+-- CONSTANTES DE COOLDOWN (centralizadas em GameConstants.Survivors[name].Abilities)
 -- ==========================================
-
--- Soldado
-local SOLDADO_DASH_COOLDOWN = 12
-local SOLDADO_DASH_SPEED = 40           -- studs/s durante o dash
-local SOLDADO_DASH_DURATION = 0.3       -- segundos de duração do dash
-local SOLDADO_BAZOOKA_COOLDOWN = 45
-local SOLDADO_BAZOOKA_RANGE = 200       -- studs de alcance do feixe
-local SOLDADO_BAZOOKA_SLOW = 0.6        -- multiplicador de velocidade ao mirar
-
--- Sackboy
-local SACKBOY_TINTA_COOLDOWN = 15
-local SACKBOY_TINTA_RANGE = 30          -- studs de alcance do disparo
-local SACKBOY_SURTO_DURATION = 5
-local SACKBOY_SURTO_SPEED_BONUS = 6
-local SACKBOY_SURTO_JUMP_BONUS = 1.5    -- multiplicador de pulo
-local SACKBOY_SURTO_COOLDOWN = 20
-
--- Robô
-local ROBO_AGARRAR_COOLDOWN = 20
-local ROBO_AGARRAR_RANGE = 20           -- studs de alcance do puxão
-local ROBO_AGARRAR_INVINCIBLE_DUR = 8   -- duração da invencibilidade do Caçador
-local ROBO_AGARRAR_SILENCE_DUR = 2      -- duração do silêncio do Caçador
-local ROBO_BLOCK_COOLDOWN = 15
-local ROBO_BLOCK_DURATION = 1.5         -- segundos de janela de contra-ataque
-local ROBO_BLOCK_RANGE = 5              -- studs para o contra-ataque
-local ROBO_SACRIFICIO_COOLDOWN = 60
-local ROBO_SACRIFICIO_WINDUP = 3        -- segundos parado antes da explosão
-local ROBO_SACRIFICIO_SPEED_BOOST = 5   -- segundos de velocidade extra pós-windup
-
--- Enfermeira
-local ENFERMEIRA_CURATIVO_COOLDOWN = 18
-local ENFERMEIRA_CURATIVO_RANGE = 10    -- studs de alcance para curar
-local ENFERMEIRA_ADRENALINA_COOLDOWN = 30
-local ENFERMEIRA_ADRENALINA_RANGE = 15  -- studs de alcance do projétil
-
--- Campeão
-local CAMPEAO_AGARRAO_COOLDOWN = 15
-local CAMPEAO_SEQUENCIA_COOLDOWN = 12
-local CAMPEAO_SEQUENCIA_RANGE = 5       -- studs de alcance dos socos
-local CAMPEAO_SEQUENCIA_HIT_WINDOW = 2  -- segundos máximos entre socos da sequência
-local CAMPEAO_SEQUENCIA_COMBO_REDUCTION = 5 -- segundos reduzidos do Agarrão se acertar 3
 
 -- ==========================================
 -- CONSTANTES DE EFEITOS DE CONTROLE
@@ -282,8 +241,9 @@ local function applyLMSBonuses(state: any, killerClass: string?)
 
 		-- Aplica bônus de stamina
 		if staminaBonus > 0 then
-			state.stamina = math.min(100, (state.stamina or 100) + staminaBonus)
-			state.maxStamina = 100 + staminaBonus
+			local staminaMax = GameConstants.Game.Stamina.Stamina_Max
+			state.stamina = math.min(staminaMax, (state.stamina or staminaMax) + staminaBonus)
+			state.maxStamina = staminaMax + staminaBonus
 		end
 	end
 end
@@ -357,6 +317,36 @@ end
 -- Chamado pelo GameManager durante a fase Start (pode yield)
 function SurvivorService.Start()
 	print("[CacadaSombria] SurvivorService iniciado. Aguardando ações de habilidades...")
+
+	-- Conecta ao sinal de início de partida para aplicar bônus LMS
+	if _matchService and _matchService.MatchStarted then
+		_matchService.MatchStarted:Connect(function()
+			SurvivorService:_applyLMSBonusesToAll()
+		end)
+	end
+end
+
+-- Aplica bônus de LMS a todos os Sobreviventes ativos na partida
+function SurvivorService:_applyLMSBonusesToAll()
+	if not _matchService then return end
+	local survivors = _matchService:getPlayersByRole("Survivor")
+	local killers = _matchService:getPlayersByRole("Killer")
+	local killerClass: string? = nil
+	if killers and #killers > 0 then
+		local killerState = _matchService:getPlayerState(killers[1])
+		if killerState then
+			killerClass = killerState.className
+		end
+	end
+
+	for _, survivor in survivors do
+		local state = _matchService:getPlayerState(survivor)
+		if state then
+			applyLMSBonuses(state, killerClass)
+		end
+	end
+	print(string.format("[CacadaSombria] Bônus LMS verificados para %d Sobreviventes (Killer: %s)",
+		#(survivors or {}), killerClass or "?"))
 end
 
 -- ==========================================
@@ -464,7 +454,7 @@ function SurvivorService:update(dt: number)
 		-- Verifica janela de sequência de socos (Campeão)
 		if survState.comboHits and survState.comboHits > 0 then
 			if survState.comboLastHitTime and
-				now - survState.comboLastHitTime > CAMPEAO_SEQUENCIA_HIT_WINDOW then
+				now - survState.comboLastHitTime > GameConstants.Survivors.Campeao.Abilities.Sequencia_Hit_Window then
 				survState.comboHits = 0
 			end
 		end
@@ -532,10 +522,10 @@ function SurvivorService:_handleSoldadoDash(state: any)
 	print(string.format("[CacadaSombria] %s usou Dash Tático!", player.Name))
 
 	-- Inicia cooldown
-	startCooldown(state, "DashTatico", SOLDADO_DASH_COOLDOWN)
+	startCooldown(state, "DashTatico", GameConstants.Survivors.Soldado.Abilities.Dash_Cooldown)
 
 	-- Calcula posição final do dash (avança na direção do olhar)
-	local dashDistance = SOLDADO_DASH_SPEED * SOLDADO_DASH_DURATION -- ≈12 studs
+	local dashDistance = GameConstants.Survivors.Soldado.Abilities.Dash_Speed * GameConstants.Survivors.Soldado.Abilities.Dash_Duration -- ≈12 studs
 	local targetPos = pos + lookDir * dashDistance
 
 	-- Move o personagem (teleport suave com animação)
@@ -545,13 +535,13 @@ function SurvivorService:_handleSoldadoDash(state: any)
 			-- Aplica um impulso (AssemblyLinearVelocity) para o dash
 			-- Nota: em Luau Roblox, usamos ApplyImpulse ou LinearVelocity
 			local bodyVelocity = Instance.new("BodyVelocity")
-			bodyVelocity.Velocity = lookDir * SOLDADO_DASH_SPEED
+			bodyVelocity.Velocity = lookDir * GameConstants.Survivors.Soldado.Abilities.Dash_Speed
 			bodyVelocity.MaxForce = Vector3.new(50000, 50000, 50000)
 			bodyVelocity.P = 1000
 			bodyVelocity.Parent = rootPart
 
 			-- Remove após a duração do dash
-			task.delay(SOLDADO_DASH_DURATION, function()
+			task.delay(GameConstants.Survivors.Soldado.Abilities.Dash_Duration, function()
 				if bodyVelocity and bodyVelocity.Parent then
 					bodyVelocity:Destroy()
 				end
@@ -640,7 +630,7 @@ function SurvivorService:_handleSoldadoBazooka(state: any)
 	-- Reduz velocidade durante a mira
 	if state.humanoid then
 		survState.originalSpeed = state.humanoid.WalkSpeed
-		state.humanoid.WalkSpeed = state.humanoid.WalkSpeed * SOLDADO_BAZOOKA_SLOW
+		state.humanoid.WalkSpeed = state.humanoid.WalkSpeed * GameConstants.Survivors.Soldado.Abilities.Bazooka_Slow
 	end
 
 	-- Notifica o cliente para mostrar UI de mira da Bazuca
@@ -662,7 +652,7 @@ function SurvivorService:_fireBazooka(state: any)
 	print(string.format("[CacadaSombria] %s DISPAROU a Bazuca!", state.player.Name))
 
 	-- Inicia cooldown (cheio)
-	startCooldown(state, "Bazooka", SOLDADO_BAZOOKA_COOLDOWN)
+	startCooldown(state, "Bazooka", GameConstants.Survivors.Soldado.Abilities.Bazooka_Cooldown)
 
 	-- Limpa estado de mira
 	survState.isUsingBazooka = false
@@ -705,7 +695,7 @@ function SurvivorService:_fireBazooka(state: any)
 	local dotProduct = lookDir:Dot(dirToKiller)
 	local distToKiller = (killerPos - pos).Magnitude
 
-	if distToKiller <= SOLDADO_BAZOOKA_RANGE and dotProduct > 0.95 then
+	if distToKiller <= GameConstants.Survivors.Soldado.Abilities.Bazooka_Range and dotProduct > 0.95 then
 		-- Atingiu! Aplica dano
 		damageKiller(killerPlayer, damage)
 		print(string.format("[CacadaSombria] Bazuca atingiu o Caçador! Dano: %d", damage))
@@ -739,7 +729,7 @@ function SurvivorService:_cancelBazookaForState(playerState: any, survState: any
 
 	-- Meio cooldown por cancelamento
 	if playerState then
-		startCooldown(playerState, "Bazooka", SOLDADO_BAZOOKA_COOLDOWN / 2)
+		startCooldown(playerState, "Bazooka", GameConstants.Survivors.Soldado.Abilities.Bazooka_Cooldown / 2)
 	end
 
 	-- Notifica o cliente
@@ -834,7 +824,7 @@ function SurvivorService:_handleSackboyTintaFire(state: any)
 
 	-- Só aplica cooldown se disparou (com carga ≥ 1s)
 	if chargeLevel >= 1 then
-		startCooldown(state, "TintaCharge", SACKBOY_TINTA_COOLDOWN)
+		startCooldown(state, "TintaCharge", GameConstants.Survivors.Sackboy.Abilities.Tinta_Cooldown)
 	end
 
 	-- Verifica alcance e direção
@@ -853,7 +843,7 @@ function SurvivorService:_handleSackboyTintaFire(state: any)
 	local dirToKiller = (killerPos - pos).Unit
 	local dotProduct = lookDir:Dot(dirToKiller)
 
-	if distToKiller > SACKBOY_TINTA_RANGE or dotProduct < 0.7 then
+	if distToKiller > GameConstants.Survivors.Sackboy.Abilities.Tinta_Range or dotProduct < 0.7 then
 		print("[CacadaSombria] Arma de Tinta: Caçador fora de alcance")
 		if _uISyncEvent then
 			UISyncEvent.sendToClient(_uISyncEvent, state.player, "TintaChargeEnd", chargeLevel, false)
@@ -926,7 +916,7 @@ function SurvivorService:_handleSackboySurto(state: any)
 
 	print(string.format("[CacadaSombria] %s entrou em SURTO!", state.player.Name))
 
-	startCooldown(state, "Surto", SACKBOY_SURTO_COOLDOWN)
+	startCooldown(state, "Surto", GameConstants.Survivors.Sackboy.Abilities.Surto_Cooldown)
 
 	-- Salva valores originais
 	local survState = _survivorState[state.userId]
@@ -939,8 +929,8 @@ function SurvivorService:_handleSackboySurto(state: any)
 	if state.humanoid then
 		survState.originalSpeed = state.humanoid.WalkSpeed
 		survState.originalJump = state.humanoid.JumpPower
-		state.humanoid.WalkSpeed = (survState.originalSpeed or GameConstants.Survivors.Sackboy.Speed) + SACKBOY_SURTO_SPEED_BONUS
-		state.humanoid.JumpPower = (survState.originalJump or 50) * SACKBOY_SURTO_JUMP_BONUS
+		state.humanoid.WalkSpeed = (survState.originalSpeed or GameConstants.Survivors.Sackboy.Speed) + GameConstants.Survivors.Sackboy.Abilities.Surto_Speed_Bonus
+		state.humanoid.JumpPower = (survState.originalJump or 50) * GameConstants.Survivors.Sackboy.Abilities.Surto_Jump_Bonus
 	end
 
 	-- Notifica o cliente
@@ -949,12 +939,12 @@ function SurvivorService:_handleSackboySurto(state: any)
 			_uISyncEvent,
 			state.player,
 			"SackboySurtoStart",
-			SACKBOY_SURTO_DURATION
+			GameConstants.Survivors.Sackboy.Abilities.Surto_Duration
 		)
 	end
 
 	-- Agenda fim do Surto
-	task.delay(SACKBOY_SURTO_DURATION, function()
+	task.delay(GameConstants.Survivors.Sackboy.Abilities.Surto_Duration, function()
 		local currentState = _matchService:getPlayerState(state.player)
 		if not currentState then return end
 
@@ -994,14 +984,14 @@ function SurvivorService:_handleRoboAgarrar(state: any)
 	if not killerPos then return end
 
 	local distToKiller = (killerPos - pos).Magnitude
-	if distToKiller > ROBO_AGARRAR_RANGE then
+	if distToKiller > GameConstants.Survivors.Robo.Abilities.Agarrar_Range then
 		print(string.format("[CacadaSombria] Agarrar do Robô: Caçador muito longe (%.1f studs)", distToKiller))
 		return
 	end
 
 	print(string.format("[CacadaSombria] Robô %s usou AGARRAR no Caçador!", state.player.Name))
 
-	startCooldown(state, "Agarrar", ROBO_AGARRAR_COOLDOWN)
+	startCooldown(state, "Agarrar", GameConstants.Survivors.Robo.Abilities.Agarrar_Cooldown)
 
 	-- Puxa o Caçador para perto do Robô
 	if killerState.character then
@@ -1016,14 +1006,14 @@ function SurvivorService:_handleRoboAgarrar(state: any)
 	end
 
 	-- Caçador fica INVINCIBLE por 8s + SILENCED por 2s
-	applyEffectToKiller(killerState, EFFECT_INVINCIBLE, ROBO_AGARRAR_INVINCIBLE_DUR)
-	applyEffectToKiller(killerState, EFFECT_SILENCE, ROBO_AGARRAR_SILENCE_DUR)
+	applyEffectToKiller(killerState, EFFECT_INVINCIBLE, GameConstants.Survivors.Robo.Abilities.Agarrar_Killer_Invincible)
+	applyEffectToKiller(killerState, EFFECT_SILENCE, GameConstants.Survivors.Robo.Abilities.Agarrar_Killer_Silence)
 
 	-- Aplica lentidão ao Caçador durante a invencibilidade
 	if killerState.humanoid then
 		killerState.humanoid.WalkSpeed = 4 -- quase parado
 		-- Agenda restauração após a invencibilidade
-		task.delay(ROBO_AGARRAR_INVINCIBLE_DUR, function()
+		task.delay(GameConstants.Survivors.Robo.Abilities.Agarrar_Killer_Invincible, function()
 			local ks = getKillerState()
 			if ks and ks.humanoid then
 				ks.humanoid.WalkSpeed = GameConstants.Killers.Distorcido.Speed
@@ -1046,11 +1036,11 @@ function SurvivorService:_handleRoboBlock(state: any)
 
 	print(string.format("[CacadaSombria] Robô %s ativou BLOCK!", state.player.Name))
 
-	startCooldown(state, "Block", ROBO_BLOCK_COOLDOWN)
+	startCooldown(state, "Block", GameConstants.Survivors.Robo.Abilities.Block_Cooldown)
 
 	-- Entra em estado de bloqueio por 1.5s
 	survState.isBlocking = true
-	survState.blockTimer = os.clock() + ROBO_BLOCK_DURATION
+	survState.blockTimer = os.clock() + GameConstants.Survivors.Robo.Abilities.Block_Duration
 
 	-- Notifica o cliente
 	if _uISyncEvent then
@@ -1058,7 +1048,7 @@ function SurvivorService:_handleRoboBlock(state: any)
 			_uISyncEvent,
 			state.player,
 			"RoboBlockStart",
-			ROBO_BLOCK_DURATION
+			GameConstants.Survivors.Robo.Abilities.Block_Duration
 		)
 	end
 
@@ -1070,7 +1060,7 @@ function SurvivorService:_handleRoboBlock(state: any)
 	if not killerState then return end
 
 	-- Agenda uma verificação após a janela de block
-	task.delay(ROBO_BLOCK_DURATION, function()
+	task.delay(GameConstants.Survivors.Robo.Abilities.Block_Duration, function()
 		survState.isBlocking = false
 		if _uISyncEvent then
 			UISyncEvent.sendToClient(_uISyncEvent, state.player, "RoboBlockEnd")
@@ -1117,11 +1107,11 @@ function SurvivorService:_handleRoboSacrificio(state: any)
 
 	print(string.format("[CacadaSombria] Robô %s iniciou SACRIFÍCIO!", state.player.Name))
 
-	startCooldown(state, "Sacrificio", ROBO_SACRIFICIO_COOLDOWN)
+	startCooldown(state, "Sacrificio", GameConstants.Survivors.Robo.Abilities.Sacrificio_Cooldown)
 
 	-- Fase 1: Windup (parado por 3s)
 	survState.sacrificeState = "channelling"
-	survState.sacrificeTimer = os.clock() + ROBO_SACRIFICIO_WINDUP
+	survState.sacrificeTimer = os.clock() + GameConstants.Survivors.Robo.Abilities.Sacrificio_Windup
 
 	-- Impede movimento durante windup
 	if state.humanoid then
@@ -1133,7 +1123,7 @@ function SurvivorService:_handleRoboSacrificio(state: any)
 			_uISyncEvent,
 			state.player,
 			"RoboSacrificeStart",
-			ROBO_SACRIFICIO_WINDUP
+			GameConstants.Survivors.Robo.Abilities.Sacrificio_Windup
 		)
 	end
 end
@@ -1303,7 +1293,7 @@ function SurvivorService:_handleEnfermeiraCurativo(state: any, targetPlayer: Pla
 	if not nursePos or not targetPos then return end
 
 	local dist = (nursePos - targetPos).Magnitude
-	if dist > ENFERMEIRA_CURATIVO_RANGE then
+	if dist > GameConstants.Survivors.Enfermeira.Abilities.Curativo_Range then
 		print(string.format("[CacadaSombria] Curativo: Alvo muito longe (%.1f studs)", dist))
 		return
 	end
@@ -1317,7 +1307,7 @@ function SurvivorService:_handleEnfermeiraCurativo(state: any, targetPlayer: Pla
 	print(string.format("[CacadaSombria] Enfermeira %s iniciou CURATIVO em %s (2s de canalização)",
 		state.player.Name, targetPlayer.Name))
 
-	startCooldown(state, "Curativo", ENFERMEIRA_CURATIVO_COOLDOWN)
+	startCooldown(state, "Curativo", GameConstants.Survivors.Enfermeira.Abilities.Curativo_Cooldown)
 
 	-- Brilho verde visível ao Caçador a 40 studs
 	local killerState = getKillerState()
@@ -1368,7 +1358,7 @@ function SurvivorService:_handleEnfermeiraCurativo(state: any, targetPlayer: Pla
 		local nPos = getPlayerPosition(state.player)
 		local tPos = getPlayerPosition(targetPlayer)
 		if not nPos or not tPos then return end
-		if (nPos - tPos).Magnitude > ENFERMEIRA_CURATIVO_RANGE + 2 then
+		if (nPos - tPos).Magnitude > GameConstants.Survivors.Enfermeira.Abilities.Curativo_Range + 2 then
 			print("[CacadaSombria] Curativo interrompido: alvo se afastou")
 			return
 		end
@@ -1443,7 +1433,7 @@ function SurvivorService:_handleEnfermeiraAdrenalina(state: any, targetPlayer: P
 	if not nursePos or not targetPos then return end
 
 	local dist = (nursePos - targetPos).Magnitude
-	if dist > ENFERMEIRA_ADRENALINA_RANGE then
+	if dist > GameConstants.Survivors.Enfermeira.Abilities.Adrenalina_Range then
 		print(string.format("[CacadaSombria] Adrenalina: Alvo muito longe (%.1f studs)", dist))
 		return
 	end
@@ -1451,7 +1441,7 @@ function SurvivorService:_handleEnfermeiraAdrenalina(state: any, targetPlayer: P
 	print(string.format("[CacadaSombria] Enfermeira %s aplicou ADRENALINA em %s!",
 		state.player.Name, targetPlayer.Name))
 
-	startCooldown(state, "Adrenalina", ENFERMEIRA_ADRENALINA_COOLDOWN)
+	startCooldown(state, "Adrenalina", GameConstants.Survivors.Enfermeira.Abilities.Adrenalina_Cooldown)
 
 	-- Aplica bônus de velocidade (+3)
 	local survState = _survivorState[targetState.userId]
@@ -1526,7 +1516,7 @@ function SurvivorService:_handleCampeaoAgarrao(state: any)
 
 	print(string.format("[CacadaSombria] Campeão %s usou AGARRÃO!", state.player.Name))
 
-	startCooldown(state, "Agarrao", CAMPEAO_AGARRAO_COOLDOWN)
+	startCooldown(state, "Agarrao", GameConstants.Survivors.Campeao.Abilities.Agarron_Cooldown)
 
 	-- Avança 8 studs
 	local dashDistance = GameConstants.Survivors.Campeao.Abilities.Agarron_Range
@@ -1642,7 +1632,7 @@ function SurvivorService:_handleCampeaoSequencia(state: any)
 
 	-- Verifica janela de combo (se o último soco foi há mais de 2s, reseta)
 	local now = os.clock()
-	if survState.comboLastHitTime and (now - survState.comboLastHitTime) > CAMPEAO_SEQUENCIA_HIT_WINDOW then
+	if survState.comboLastHitTime and (now - survState.comboLastHitTime) > GameConstants.Survivors.Campeao.Abilities.Sequencia_Hit_Window then
 		survState.comboHits = 0
 	end
 
@@ -1656,7 +1646,7 @@ function SurvivorService:_handleCampeaoSequencia(state: any)
 
 	-- Verifica se está na primeira ativação da sequência (inicia cooldown)
 	if comboHits == 1 then
-		startCooldown(state, "Sequencia", CAMPEAO_SEQUENCIA_COOLDOWN)
+		startCooldown(state, "Sequencia", GameConstants.Survivors.Campeao.Abilities.Sequencia_Cooldown)
 	end
 
 	print(string.format("[CacadaSombria] Campeão %s: SOCo #%d da Sequência!",
@@ -1684,7 +1674,7 @@ function SurvivorService:_handleCampeaoSequencia(state: any)
 	local dirToKiller = distToKiller > 0 and (killerPos - pos).Unit or Vector3.new(0, 0, 0)
 	local dotProduct = lookDir:Dot(dirToKiller)
 
-	if distToKiller <= CAMPEAO_SEQUENCIA_RANGE and dotProduct > 0.5 then
+	if distToKiller <= GameConstants.Survivors.Campeao.Abilities.Sequencia_Range and dotProduct > 0.5 then
 		-- Atingiu!
 		damageKiller(killerPlayer, damage)
 		print(string.format("[CacadaSombria] Soco #%d atingiu! Dano: %d", comboHits, damage))
@@ -1710,7 +1700,7 @@ function SurvivorService:_handleCampeaoSequencia(state: any)
 			-- Reduz cooldown do Agarrão em 5s
 			local agarraoCooldown = state.cooldowns["Agarrao"]
 			if agarraoCooldown then
-				state.cooldowns["Agarrao"] = math.max(now, agarraoCooldown - CAMPEAO_SEQUENCIA_COMBO_REDUCTION)
+				state.cooldowns["Agarrao"] = math.max(now, agarraoCooldown - GameConstants.Survivors.Campeao.Abilities.Sequencia_Combo_Reduction)
 				print("[CacadaSombria] Combo completo! Cooldown do Agarrão reduzido em 5s!")
 			end
 
@@ -1728,7 +1718,7 @@ function SurvivorService:_handleCampeaoSequencia(state: any)
 			"CampeaoSequencia",
 			comboHits,
 			damage,
-			distToKiller <= CAMPEAO_SEQUENCIA_RANGE and dotProduct > 0.5
+			distToKiller <= GameConstants.Survivors.Campeao.Abilities.Sequencia_Range and dotProduct > 0.5
 		)
 	end
 end

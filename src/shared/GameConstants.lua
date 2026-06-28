@@ -113,8 +113,16 @@ GameConstants.Survivors = {
     HP = 120,
     Speed = 20,
     Abilities = {
+      -- Dash Tático (Q)
+      Dash_Cooldown = 12,            -- segundos
+      Dash_Speed = 40,               -- studs/s
+      Dash_Duration = 0.3,           -- segundos
       Dash_Push_Studs = 10,
       Dash_Silence_Duration = 3,
+      -- Bazuca (E)
+      Bazooka_Cooldown = 45,         -- segundos
+      Bazooka_Range = 200,           -- studs
+      Bazooka_Slow = 0.6,            -- multiplicador ao mirar
       Bazooka_Aim_Time = 2,
       Bazooka_Fire_Window = 10,
     }
@@ -123,21 +131,38 @@ GameConstants.Survivors = {
     HP = 110,
     Speed = 26,
     Abilities = {
-      Surto_Duration = 5,
+      -- Arma de Tinta (Q)
+      Tinta_Cooldown = 15,           -- segundos
+      Tinta_Range = 30,              -- studs
       Charge_Level1_Slow = 1,
       Charge_Level2_Silence = 4,
       Charge_Level3_Stun = true,
+      -- Surto (E)
+      Surto_Duration = 5,
+      Surto_Speed_Bonus = 6,
+      Surto_Jump_Bonus = 1.5,        -- multiplicador
+      Surto_Cooldown = 20,           -- segundos
     }
   },
   Robo = {
     HP = 150,
     Speed = 18,
     Abilities = {
+      -- Agarrar (Q)
+      Agarrar_Cooldown = 20,         -- segundos
+      Agarrar_Range = 20,            -- studs
       Agarrar_Killer_Invincible = 8,
       Agarrar_Killer_Silence = 2,
+      -- Block (E)
+      Block_Cooldown = 15,           -- segundos
+      Block_Duration = 1.5,          -- segundos
+      Block_Range = 5,               -- studs
       Block_Silence = 3,
       Block_Heal = 10,
+      -- Sacrifício (R)
+      Sacrificio_Cooldown = 60,      -- segundos
       Sacrificio_Windup = 3,
+      Sacrificio_Speed_Boost = 5,    -- segundos de boost extra
       Sacrificio_Speed_Duration = 5,
       Sacrificio_Self_Damage = 40,
       Sacrificio_Self_Slow = 8,
@@ -149,9 +174,15 @@ GameConstants.Survivors = {
     HP = 105,
     Speed = 22,
     Abilities = {
+      -- Curativo (Q)
+      Curativo_Cooldown = 18,        -- segundos
+      Curativo_Range = 10,           -- studs
       Curativo_Channel = 2,
       Curativo_Heal = 25,
       Curativo_Glow_Range = 40,      -- studs, visível ao killer
+      -- Adrenalina (E)
+      Adrenalina_Cooldown = 30,      -- segundos
+      Adrenalina_Range = 15,         -- studs
       Adrenalina_Speed_Bonus = 3,
       Adrenalina_Shield_Duration = 5,
       Adrenalina_Reveal_Duration = 2,
@@ -161,10 +192,17 @@ GameConstants.Survivors = {
     HP = 130,
     Speed = 22,
     Abilities = {
+      -- Agarrão (Q)
+      Agarron_Cooldown = 15,         -- segundos
       Agarron_Range = 8,              -- studs
       Agarron_Damage = 20,
       Agarron_Throw = 8,
       Agarron_Grounded = 1,
+      -- Sequência de 3 Socos (E)
+      Sequencia_Cooldown = 12,       -- segundos
+      Sequencia_Range = 5,           -- studs
+      Sequencia_Hit_Window = 2,      -- segundos máximos entre socos
+      Sequencia_Combo_Reduction = 5, -- segundos reduzidos do Agarrão
       Sequencia_Damage_PerHit = 5,
       Sequencia_Third_Bonus = 5,
     }
@@ -180,6 +218,14 @@ GameConstants.Game = {
 	RepairTime = 8,                  -- seconds per generator (solo)
 	MaxCageRescues = 2,              -- times a survivor can be caged
 	MatchDuration = 900,             -- 15 minutes
+
+	-- Stamina dos Sobreviventes
+	Stamina = {
+		Stamina_Max = 100,              -- stamina máxima
+		Stamina_Consume_Rate = 20,      -- por segundo correndo
+		Stamina_Regen_Rate = 10,        -- por segundo parado/andando
+		Stamina_Exhausted_Cooldown = 3, -- segundos sem correr após esgotar
+	},
 }
 
 -- ==========================================
@@ -198,7 +244,7 @@ GameConstants.Capture = {
 	WiggleBreakStunDuration = 2,     -- segundos de atordoamento no Killer ao se libertar
 
 	-- Jaulas
-	CageTotalPositions = 5,          -- posições fixas no mapa
+	CageTotalPositions = 3,          -- posições fixas no mapa (MansionData.Cages)
 	CageActivePerMatch = 3,          -- jaulas ativas por partida
 	CageDepositTime = 2,             -- segundos para depositar o Sobrevivente
 	CageEliminationTime = 120,       -- segundos até eliminação na jaula
