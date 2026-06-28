@@ -191,6 +191,22 @@ GameConstants.MapaMVP = {
   HasBasement = true,
   GeneratorCount = 5,
   CageCount = 3,
+
+  -- Esconderijos
+  TotalHidingSpots = 15,            -- total de esconderijos no mapa
+  ActiveHidingSpotsPerMatch = 12,   -- quantos ficam ativos (3 bloqueados aleatoriamente)
+  MaxHidingTime = 20,               -- segundos máximos dentro de um esconderijo
+
+  -- Spawn
+  MinSpawnDistance = 30,            -- distância mínima (studs) entre spawn do Killer e Survivor
+
+  -- Iluminação do Porão
+  BasementBrightness = 0.2,         -- 20% do brilho normal
+  BasementFogDensity = 0.8,         -- densidade da névoa (0 a 1)
+
+  -- Performance Mobile
+  MaxParts = 500,                   -- limite de Parts no mapa
+  MaxParticleEmitters = 5,          -- limite de emissores de partículas simultâneos
 }
 
 return GameConstants

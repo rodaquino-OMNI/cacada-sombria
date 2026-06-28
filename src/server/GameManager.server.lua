@@ -33,9 +33,13 @@ local ServerStorage = game:GetService("ServerStorage")
 local MatchService = require(ServerScriptService.Services.MatchService)
 local SurvivorService = require(ServerScriptService.Services.SurvivorService)
 local KillerService = require(ServerScriptService.Services.KillerService)
+local GeneratorService = require(ServerScriptService.Services.GeneratorService)
+local ObjectiveService = require(ServerScriptService.Services.ObjectiveService)
+local MapService = require(ServerScriptService.Services.MapService)
 local PlayerEvents = require(ServerScriptService.Events.PlayerEvents)
 local SurvivorEvents = require(ServerScriptService.Events.SurvivorEvents)
 local KillerEvents = require(ServerScriptService.Events.KillerEvents)
+local GeneratorEvents = require(ServerScriptService.Events.GeneratorEvents)
 
 -- ==========================================
 -- DEPENDÊNCIAS — MÓDULOS COMPARTILHADOS
@@ -159,11 +163,18 @@ local function initServices()
 	-- Registra handlers no PlayerActionEvent (roteamento de Ability1/2/3)
 	SurvivorEvents.Init(playerActionEvent, SurvivorService, MatchService)
 
-	-- Serviços futuros serão inicializados aqui:
-	-- GeneratorService.Init(...)
-	-- CaptureService.Init(...)
-	-- ObjectiveService.Init(...)
-	-- AudioService.Init(...)
+	-- MapService: gerenciamento do mapa, esconderijos e spawns
+	MapService.Init(gameStateEvent, uiSyncEvent, MatchService)
+
+	-- GeneratorService: geradores, reparo e skill checks (Épico E5)
+	GeneratorService.Init(gameStateEvent, uiSyncEvent, playerActionEvent, MatchService)
+
+	-- ObjectiveService: portão de fuga, condições de vitória, colapso (Épico E5)
+	ObjectiveService.Init(gameStateEvent, uiSyncEvent, playerActionEvent, MatchService, GeneratorService)
+
+	-- GeneratorEvents: handlers de interação com geradores e portão (Épico E5)
+	-- Registra handlers no PlayerActionEvent (roteamento de Interact)
+	GeneratorEvents.Init(playerActionEvent, GeneratorService, ObjectiveService, MatchService)
 
 	print("[CacadaSombria] ═══ FASE INIT concluída ═══")
 end
@@ -192,11 +203,20 @@ local function startServices()
 		SurvivorService.Start()
 	end)
 
-	-- Serviços futuros:
-	-- task.spawn(function() GeneratorService.Start() end)
-	-- task.spawn(function() CaptureService.Start() end)
-	-- task.spawn(function() ObjectiveService.Start() end)
-	-- task.spawn(function() AudioService.Start() end)
+	-- MapService.Start: carrega o mapa, configura iluminação e esconderijos
+	task.spawn(function()
+		MapService.Start()
+	end)
+
+	-- GeneratorService.Start conecta ao game loop e spawn de geradores (Épico E5)
+	task.spawn(function()
+		GeneratorService.Start()
+	end)
+
+	-- ObjectiveService.Start conecta ao game loop, colapso e vitória (Épico E5)
+	task.spawn(function()
+		ObjectiveService.Start()
+	end)
 
 	print("[CacadaSombria] ═══ FASE START concluída ═══")
 end
@@ -316,6 +336,109 @@ local function wireServiceSignals()
 		-- Futuro: efeitos visuais de escudo
 	end)
 
+	-- ==========================================
+	-- SINAIS DO MAPSERVICE
+	-- ==========================================
+
+	-- Quando o mapa termina de carregar
+	MapService.MapLoaded:Connect(function()
+		print("[CacadaSombria] Signal: MapLoaded — Mapa carregado e pronto!")
+	end)
+
+	-- Quando um jogador entra em um esconderijo
+	MapService.HidingSpotEntered:Connect(function(player: Player, spotId: number)
+		print(string.format("[CacadaSombria] Signal: HidingSpotEntered — %s no esconderijo #%d",
+			player.Name, spotId))
+		-- Futuro: AudioService:PlayHidingSound(player)
+		-- Futuro: NotificationService para o Killer (alerta de proximidade)
+	end)
+
+	-- Quando um jogador sai de um esconderijo
+	MapService.HidingSpotExited:Connect(function(player: Player, spotId: number)
+		print(string.format("[CacadaSombria] Signal: HidingSpotExited — %s saiu do esconderijo #%d",
+			player.Name, spotId))
+	end)
+
+	-- Quando os esconderijos bloqueados são definidos
+	MapService.HidingSpotBlocked:Connect(function(blockedSpots: {[number]: boolean})
+		local count = 0
+		for _ in blockedSpots do count = count + 1 end
+		print(string.format("[CacadaSombria] Signal: HidingSpotBlocked — %d esconderijos bloqueados", count))
+	end)
+
+	-- Quando a iluminação é aplicada
+	MapService.LightingApplied:Connect(function()
+		print("[CacadaSombria] Signal: LightingApplied — Iluminação dramática configurada")
+	end)
+
+	-- ==========================================
+	-- SINAIS DO GENERATORSERVICE (Épico E5)
+	-- ==========================================
+
+	-- Quando um gerador é consertado
+	GeneratorService.GeneratorRepaired:Connect(function(generatorId: number, totalRepaired: number)
+		print(string.format("[CacadaSombria] Signal: GeneratorRepaired — Gerador #%d (%d/%d)",
+			generatorId, totalRepaired, GameConstants.Game.GeneratorsToRepair))
+		-- Futuro: AudioService:PlayGeneratorCompleteSound()
+	end)
+
+	-- Quando todos os geradores são consertados (portão destrancado)
+	GeneratorService.AllGeneratorsRepaired:Connect(function()
+		print("[CacadaSombria] Signal: AllGeneratorsRepaired — Portão de fuga destrancado!")
+	end)
+
+	-- Quando um skill check falha (alerta global para o Caçador)
+	GeneratorService.GeneratorAlert:Connect(function(generatorPosition: Vector3)
+		print(string.format("[CacadaSombria] Signal: GeneratorAlert — Alerta em (%.0f, %.0f, %.0f)",
+			generatorPosition.X, generatorPosition.Y, generatorPosition.Z))
+		-- Futuro: AudioService:PlayGeneratorAlertSound()
+		-- Futuro: NotificationService:NotifyKiller(generatorPosition)
+	end)
+
+	-- ==========================================
+	-- SINAIS DO OBJECTIVESERVICE (Épico E5)
+	-- ==========================================
+
+	-- Quando o portão é ativado (alavanca puxada)
+	ObjectiveService.GateActivated:Connect(function(gateId: number)
+		print(string.format("[CacadaSombria] Signal: GateActivated — Portão #%d ativado!", gateId))
+		-- Futuro: AudioService:PlayGateAlarmSound()
+	end)
+
+	-- Quando o portão termina de abrir
+	ObjectiveService.GateOpened:Connect(function(gateId: number)
+		print(string.format("[CacadaSombria] Signal: GateOpened — Portão #%d aberto! Fujam!", gateId))
+		-- Futuro: AudioService:PlayGateOpenSound()
+	end)
+
+	-- Quando o portão fecha (colapso)
+	ObjectiveService.GateClosed:Connect(function(gateId: number)
+		print(string.format("[CacadaSombria] Signal: GateClosed — Portão #%d fechado permanentemente.", gateId))
+	end)
+
+	-- Vitória dos Sobreviventes
+	ObjectiveService.SurvivorsWin:Connect(function()
+		print("[CacadaSombria] Signal: SurvivorsWin — SOBREVIVENTES VENCERAM!")
+		-- Futuro: AudioService:PlayVictorySound("Survivors")
+	end)
+
+	-- Vitória do Caçador
+	ObjectiveService.KillerWin:Connect(function(reason: string)
+		print(string.format("[CacadaSombria] Signal: KillerWin — CAÇADOR VENCEU! (motivo: %s)", reason))
+		-- Futuro: AudioService:PlayVictorySound("Killer")
+	end)
+
+	-- Colapso iniciado
+	ObjectiveService.CollapseStarted:Connect(function(secondsRemaining: number)
+		print(string.format("[CacadaSombria] Signal: CollapseStarted — COLAPSO! Portão abre por %.0fs", secondsRemaining))
+		-- Futuro: AudioService:PlayCollapseAlarm()
+	end)
+
+	-- Sobrevivente escapou
+	ObjectiveService.SurvivorEscaped:Connect(function(player: Player)
+		print(string.format("[CacadaSombria] Signal: SurvivorEscaped — %s escapou!", player.Name))
+	end)
+
 	print("[CacadaSombria] Sinais conectados.")
 end
 
@@ -347,8 +470,10 @@ local function main()
 	startServices()
 
 	-- 6. Loop de atualização do SurvivorService (efeitos e cooldowns contínuos)
+	--    e MapService (verificação de timeouts de esconderijos)
 	RunService.Heartbeat:Connect(function(dt: number)
 		SurvivorService:update(dt)
+		MapService:update(dt)
 	end)
 
 	print("[CacadaSombria] GameManager carregado e funcionando!")

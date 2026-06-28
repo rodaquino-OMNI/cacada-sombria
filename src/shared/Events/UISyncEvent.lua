@@ -8,6 +8,7 @@
   - Barra de Fúria do Caçador
   - Estado de Rage ativo
   - Efeitos visuais (blur de Grito, indicadores)
+  - Progresso de geradores, skill checks, portão (E5)
 
   ATENÇÃO: Este módulo define as constantes e funções auxiliares.
   O RemoteEvent em si é criado pelo GameManager.
@@ -42,6 +43,45 @@ UISyncEvent.MESSAGES = {
 
 	-- Indicador de Sobreviventes (contagem)
 	SURVIVOR_COUNT = "SurvivorCount",       -- params: alive (number), inCage (number), escaped (number)
+
+	-- ==========================================
+	-- GERADORES — Épico E5
+	-- ==========================================
+
+	-- Progresso de reparo de um gerador específico (HUD local)
+	GENERATOR_PROGRESS = "GeneratorProgress",     -- params: generatorId, progress (0-100)
+
+	-- Início do reparo (mostrar barra de progresso)
+	REPAIR_START = "RepairStart",                 -- params: generatorId, totalTime
+
+	-- Reparo cancelado ou interrompido
+	REPAIR_STOP = "RepairStop",                   -- params: generatorId, reason
+
+	-- Skill check — início (mostrar QTE visual)
+	SKILL_CHECK_START = "SkillCheckStart",        -- params: generatorId, duration, difficulty
+
+	-- Skill check — resultado do acerto
+	SKILL_CHECK_RESULT = "SkillCheckResult",      -- params: generatorId, isHit (boolean), progressChange
+
+	-- Skill check — término (encerrar QTE visual)
+	SKILL_CHECK_END = "SkillCheckEnd",            -- params: generatorId
+
+	-- ==========================================
+	-- PORTÃO DE FUGA — Épico E5
+	-- ==========================================
+
+	-- Progresso de abertura do portão
+	GATE_PROGRESS = "GateProgress",               -- params: gateId, progress (0-100)
+
+	-- ==========================================
+	-- ALERTAS SONOROS — Épico E5
+	-- ==========================================
+
+	-- Alerta de gerador (skill check falhou — som alto global)
+	GENERATOR_ALERT = "GeneratorAlert",           -- params: generatorPosition (Vector3)
+
+	-- Som de zumbido do gerador (para Sobreviventes próximos)
+	GENERATOR_BUZZ = "GeneratorBuzz",             -- params: generatorId, isActive (boolean)
 }
 
 -- ==========================================

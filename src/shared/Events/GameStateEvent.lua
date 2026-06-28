@@ -8,6 +8,7 @@
   - Atribuição de classe
   - Estado da partida
   - HP, stamina, fury
+  - Geradores, portão, condições de vitória (E5)
 
   ATENÇÃO: Este módulo define as constantes e funções auxiliares.
   O RemoteEvent em si é criado pelo GameManager.
@@ -40,6 +41,19 @@ GameStateEvent.MESSAGES = {
 
 	-- Geradores e objetivos (Épico E5)
 	GENERATOR_UPDATE = "GeneratorUpdate", -- params: repaired, total
+	GENERATOR_REPAIRED = "GeneratorRepaired", -- params: generatorId, totalRepaired, totalNeeded
+	GENERATOR_ALL_REPAIRED = "GeneratorAllRepaired", -- sem parâmetros — todos os 5 consertados
+
+	-- Portão de fuga (Épico E5)
+	GATE_ACTIVATED = "GateActivated",     -- params: gateId, gatePosition
+	GATE_OPENED = "GateOpened",           -- params: gateId
+	GATE_CLOSED = "GateClosed",           -- params: gateId (colapso fecha permanentemente)
+
+	-- Colapso (Épico E5)
+	COLLAPSE_STARTED = "CollapseStarted", -- params: secondsRemaining
+
+	-- Fuga / Captura (Épico E5)
+	ESCAPED = "Escaped",                  -- params: playerName (Sobrevivente escapou)
 
 	-- Resultado da partida
 	GAME_OVER = "GameOver",             -- params: winner ("Killer" | "Survivors")
