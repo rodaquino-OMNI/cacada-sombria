@@ -620,80 +620,62 @@ function GeneratorService:_update(dt: number)
 
 		-- Pula geradores inativos ou já completados
 		if not gen.isActive or gen.isCompleted then
-			-- Se alguém ainda está referenciado como reparador, limpa
 			if gen.currentRepairer then
 				GeneratorService:cancelRepair(i, "gerador completado/inativo")
 			end
-			goto skip
-		end
+		elseif not gen.currentRepairer then
+			-- Se não há ninguém reparando, pula
+		else
+			-- Verifica se o reparador ainda é válido
+			local player = gen.currentRepairer
+			local state = _matchService:getPlayerState(player)
+			if not state or not state.isAlive or state.isInCage then
+				GeneratorService:cancelRepair(i, "jogador inválido")
+			elseif state.humanoid and state.humanoid.WalkSpeed > 0 then
+				-- Verifica se o jogador se moveu (anti-cheat)
+				GeneratorService:cancelRepair(i, "jogador se moveu")
+			else
+				-- === PROGRESSO DE REPARO ===
+				local progressPerSec = 100 / REPAIR_TIME
+				gen.progress = math.min(100, gen.progress + progressPerSec * dt)
 
-		-- Se não há ninguém reparando, pula
-		if not gen.currentRepairer then
-			goto skip
-		end
+				if _uiSyncEvent then
+					UISyncEvent.sendToClient(
+						_uiSyncEvent,
+						player,
+						UISyncEvent.MESSAGES.GENERATOR_PROGRESS,
+						i,
+						gen.progress
+					)
+				end
 
-		-- Verifica se o reparador ainda é válido
-		local player = gen.currentRepairer
-		local state = _matchService:getPlayerState(player)
-		if not state or not state.isAlive or state.isInCage then
-			GeneratorService:cancelRepair(i, "jogador inválido")
-			goto skip
-		end
+				-- === SKILL CHECKS ===
+				if not gen.skillCheckActive then
+					local timeSinceLastCheck = now - (gen.lastSkillCheckTime or 0)
+					if timeSinceLastCheck >= SKILL_CHECK_MIN_INTERVAL then
+						local chance = dt / (SKILL_CHECK_MAX_INTERVAL - SKILL_CHECK_MIN_INTERVAL)
+						if math.random() < chance then
+							gen.lastSkillCheckTime = now
+							GeneratorService:_startSkillCheck(i)
+						end
+					end
+				else
+					local skillElapsed = now - (gen.skillCheckStartTime or now)
+					if skillElapsed > SKILL_CHECK_DURATION then
+						GeneratorService:_handleSkillCheckMiss(
+							gen.currentRepairer,
+							i,
+							"tempo esgotado"
+						)
+					end
+				end
 
-		-- Verifica se o jogador se moveu (anti-cheat: WalkSpeed foi restaurado)
-		if state.humanoid and state.humanoid.WalkSpeed > 0 then
-			GeneratorService:cancelRepair(i, "jogador se moveu")
-			goto skip
-		end
-
-		-- === PROGRESSO DE REPARO ===
-		-- Avança o progresso baseado no delta time
-		local progressPerSec = 100 / REPAIR_TIME -- 12.5% por segundo para 8s
-		gen.progress = math.min(100, gen.progress + progressPerSec * dt)
-
-		-- Notifica o cliente sobre o progresso atual
-		if _uiSyncEvent then
-			UISyncEvent.sendToClient(
-				_uiSyncEvent,
-				player,
-				UISyncEvent.MESSAGES.GENERATOR_PROGRESS,
-				i,
-				gen.progress
-			)
-		end
-
-		-- === SKILL CHECKS ===
-		-- Inicia um skill check aleatoriamente durante o reparo
-		if not gen.skillCheckActive then
-			local timeSinceLastCheck = now - (gen.lastSkillCheckTime or 0)
-			if timeSinceLastCheck >= SKILL_CHECK_MIN_INTERVAL then
-				-- Chance de iniciar um skill check a cada intervalo
-				-- Aproximadamente 1 check a cada 3-6 segundos
-				local chance = dt / (SKILL_CHECK_MAX_INTERVAL - SKILL_CHECK_MIN_INTERVAL)
-				if math.random() < chance then
-					gen.lastSkillCheckTime = now
-					GeneratorService:_startSkillCheck(i)
+				-- === CONCLUSÃO DO REPARO ===
+				if gen.progress >= 100 then
+					GeneratorService:_completeRepair(i)
 				end
 			end
-		else
-			-- Verifica se o skill check expirou
-			local skillElapsed = now - (gen.skillCheckStartTime or now)
-			if skillElapsed > SKILL_CHECK_DURATION then
-				-- Skill check expirou sem resposta → erro automático
-				GeneratorService:_handleSkillCheckMiss(
-					gen.currentRepairer,
-					i,
-					"tempo esgotado"
-				)
-			end
 		end
-
-		-- === CONCLUSÃO DO REPARO ===
-		if gen.progress >= 100 then
-			GeneratorService:_completeRepair(i)
-		end
-
-		::skip::
 	end
 end
 
